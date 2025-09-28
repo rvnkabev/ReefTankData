@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reef Chemistry Logger</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121a33; --muted:#9fb2ff; --ink:#e9eefc; --accent:#7aa2ff; --accent2:#25d0a6; --warn:#ffb02e; --danger:#ff5a78; --ok:#21d19f;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#0b1020 0%,#0e1430 100%);color:var(--ink)}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px}
+    h1{margin:0 0 12px;font-size:clamp(22px,3.5vw,36px)}
+    .muted{color:var(--muted)}
+    .panel{background:var(--panel);border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+    .grid{display:grid;gap:12px}
+    .grid.cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+    @media (max-width:900px){.grid.cols-6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:640px){.grid.cols-6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,button,select{font:inherit}
+    input[type="date"], select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
+    select:focus,input:focus{border-color:var(--accent)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#081126}
+    .btn.ghost{background:transparent;border:1px solid #223061;color:var(--ink)}
+    .btn.warn{background:var(--warn);color:#2b1600}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    table{width:100%;border-collapse:separate;border-spacing:0 8px}
+    th,td{text-align:left;padding:10px 12px}
+    thead th{font-size:12px;color:var(--muted)}
+    tbody tr{background:#0f1733}
+    tbody td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+    tbody td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+    .pill.ok{background:rgba(33,209,159,.15);color:var(--ok)}
+    .pill.warn{background:rgba(255,176,46,.15);color:var(--warn)}
+    .pill.danger{background:rgba(255,90,120,.15);color:var(--danger)}
+    .hint{font-size:11px;color:#bcd0ff;opacity:.85}
+    footer{margin-top:18px;color:#94a8ff;font-size:12px;opacity:.8}
+    .right{margin-left:auto}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="align-items:center">
+      <div>
+        <h1>Reef Chemistry Logger</h1>
+        <div class="muted">Track NO₃, PO₄, KH, Ca, Mg — saved locally in your browser.</div>
+      </div>
+      <div class="right toolbar">
+        <button class="btn ghost" id="exportBtn" title="Export CSV">Export CSV</button>
+        <label for="importInput" class="btn ghost" style="cursor:pointer" title="Import CSV">Import CSV</label>
+        <input id="importInput" type="file" accept=".csv" style="display:none" />
+        <button class="btn ghost" id="clearAllBtn" title="Clear data">Clear All</button>
+      </div>
+    </header>
+
+    <section class="panel" style="margin-top:16px">
+      <form id="entryForm" class="grid cols-6" autocomplete="off">
+        <div>
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" required />
+          <div class="hint">Default = today (local time)</div>
+        </div>
+        <div>
+          <label for="no3">NO₃ (ppm)</label>
+          <select id="no3" name="no3">
+            <option value="">—</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2.5">2.5</option>
+            <option value="10">10</option>
+            <option value=">10">&gt;10</option>
+          </select>
+        </div>
+        <div>
+          <label for="po4">PO₄ (ppm)</label>
+          <select id="po4" name="po4">
+            <option value="">—</option>
+            <option value="0">0</option>
+            <option value="0.03">0.03</option>
+            <option value="0.1">0.1</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="1">1</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <div>
+          <label for="kh">KH (dKH)</label>
+          <select id="kh" name="kh">
+            <option value="">—</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+          </select>
+        </div>
+        <div>
+          <label for="ca">Ca (ppm)</label>
+          <input type="number" id="ca" name="ca" inputmode="numeric" step="1" min="0" placeholder="e.g. 430" />
+        </div>
+        <div>
+          <label for="mg">Mg (ppm)</label>
+          <input type="number" id="mg" name="mg" inputmode="numeric" step="1" min="0" placeholder="e.g. 1350" />
+        </div>
+        <div class="row" style="grid-column:1/-1;justify-content:flex-end;margin-top:6px">
+          <button type="button" class="btn ghost" id="resetBtn">Reset</button>
+          <button type="submit" class="btn primary" id="saveBtn">Save</button>
+        </div>
+        <div class="row" style="grid-column:1/-1;justify-content:flex-end;margin-top:6px">
+          <button type="button" class="btn ghost" id="resetBtn">Reset</button>
+          <button type="submit" class="btn primary" id="saveBtn">Save</button>
+          <button type="button" class="btn warn" id="saveAndNotesBtn" title="Save and send to iPhone Notes via Shortcut">Save → Notes</button>
+        </div>
+      </form>
+      <div id="warnBox" style="margin-top:8px"></div>
+    </section>
+
+    <section class="panel" style="margin-top:16px">
+      <div class="row" style="align-items:center; margin-bottom:8px">
+        <strong>Log</strong>
+        <div class="right toolbar">
+          <select id="sortSelect" title="Sort order">
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+          <input type="text" id="search" placeholder="Search date or value…" />
+        </div>
+      </div>
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th><th>NO₃</th><th>PO₄</th><th>KH</th><th>Ca</th><th>Mg</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Pro tip: Click ✎ to edit a row. Data is stored in <code>localStorage</code> (this browser only).
+    </footer>
+  </div>
+
+  <script>
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+
+    function pad(n){return String(n).padStart(2,'0')}
+    function todayLocalISO(){
+      const d = new Date();
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    }
+
+    function uid(){return Math.random().toString(36).slice(2)+Date.now().toString(36)}
+
+    function toNumber(value){
+      if(value===undefined||value===null||value==='') return null;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    // Storage
+    const KEY = 'reefChemEntries.v1';
+    function load(){try{ return JSON.parse(localStorage.getItem(KEY))||[] }catch{ return [] }}
+    function save(data){ localStorage.setItem(KEY, JSON.stringify(data)) }
+
+    let entries = load();
+    let editingId = null;
+
+    const form = $('#entryForm');
+    const tbody = $('#tbody');
+    const sortSelect = $('#sortSelect');
+    const search = $('#search');
+
+    $('#date').value = todayLocalISO();
+
+    form.addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      const entry = {
+        id: editingId || uid(),
+        date: data.date || todayLocalISO(),
+        no3: toNumber(data.no3.replace('>','')),
+        po4: toNumber(data.po4),
+        kh: toNumber(data.kh),
+        ca: toNumber(data.ca),
+        mg: toNumber(data.mg),
+        createdAt: editingId ? entries.find(x=>x.id===editingId)?.createdAt : Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if(editingId){
+        entries = entries.map(e=> e.id===editingId ? entry : e);
+      } else {
+        entries.push(entry);
+      }
+      save(entries);
+      render();
+      form.reset();
+      $('#date').value = todayLocalISO();
+      editingId = null;
+      $('#saveBtn').textContent = 'Save';
+    });
+
+    $('#resetBtn').addEventListener('click', ()=>{
+      form.reset();
+      $('#date').value = todayLocalISO();
+      editingId = null;
+      $('#saveBtn').textContent = 'Save';
+    });
+
+    $('#clearAllBtn').addEventListener('click', ()=>{
+      if(confirm('Delete ALL entries?')){
+        entries = []; save(entries); render();
+      }
+    });
+
+    sortSelect.addEventListener('change', render);
+    search.addEventListener('input', render);
+
+    function render(){
+      const term = search.value.trim().toLowerCase();
+      const sorted = [...entries].sort((a,b)=> sortSelect.value==='asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+      const filtered = term ? sorted.filter(e=> JSON.stringify(e).toLowerCase().includes(term)) : sorted;
+      tbody.innerHTML = filtered.map(e=> rowHTML(e)).join('');
+      $$('#tbody button[data-id]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.getAttribute('data-id');
+          const action = btn.getAttribute('data-action');
+          const e = entries.find(x=>x.id===id);
+          if(!e) return;
+          if(action==='edit'){
+            editingId = id;
+            $('#date').value = e.date;
+            $('#no3').value = e.no3 ?? '';
+            $('#po4').value = e.po4 ?? '';
+            $('#kh').value = e.kh ?? '';
+            $('#ca').value = e.ca ?? '';
+            $('#mg').value = e.mg ?? '';
+            $('#saveBtn').textContent = 'Update';
+            window.scrollTo({top:0,behavior:'smooth'});
+          } else if(action==='delete'){
+            if(confirm('Delete this entry?')){
+              entries = entries.filter(x=>x.id!==id);
+              save(entries); render();
+            }
+          }
+        });
+      });
+    }
+
+    function rowHTML(e){
+      return `<tr>
+        <td>${e.date}</td>
+        <td>${e.no3 ?? '—'}</td>
+        <td>${e.po4 ?? '—'}</td>
+        <td>${e.kh ?? '—'}</td>
+        <td>${e.ca ?? '—'}</td>
+        <td>${e.mg ?? '—'}</td>
+        <td style="text-align:right">
+          <button class="btn ghost" data-action="edit" data-id="${e.id}" title="Edit">✎</button>
+          <button class="btn ghost" data-action="delete" data-id="${e.id}" title="Delete">🗑️</button>
+        </td>
+      </tr>`;
+    }
+
+    render();
+
+    // --- iOS Shortcut integration ---
+    // Opens Shortcuts app to run: SaveToReefTankData with the log text as input
+    function openShortcutWithText(text){
+      const shortcutName = 'SaveToReefTankData';
+      const url = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(text)}`;
+      // Navigate to Shortcuts (works on iPhone/iPad Safari). Other browsers may ignore it.
+      window.location.href = url;
+    }
+
+    function formatEntryForNotes({date,no3,po4,kh,ca,mg}){
+      const v = x => (x===undefined || x===null || x==='') ? '-' : x;
+      return `Reef Log — ${date}
+NO3: ${v(no3)}
+PO4: ${v(po4)}
+KH: ${v(kh)}
+Ca: ${v(ca)}
+Mg: ${v(mg)}`;
+    }
+
+    let pendingShortcut = false;
+
+    // Hook up the Save → Notes button
+    $('#saveAndNotesBtn').addEventListener('click', ()=>{
+      pendingShortcut = true; // tell the submit handler to open the shortcut after saving
+      form.requestSubmit();
+    });
+
+    // Patch the existing submit handler behavior by wrapping it
+    // (We already set it above; here we add a listener to run after render)
+    form.addEventListener('submit', (/*ev already handled*/)=>{
+      // Use current form values (not the normalized numeric ones) for display so we can keep ">10"
+      const fd = Object.fromEntries(new FormData(form).entries());
+      const displayEntry = {
+        date: fd.date || todayLocalISO(),
+        no3: fd.no3 || '',
+        po4: fd.po4 || '',
+        kh: fd.kh || '',
+        ca: fd.ca || '',
+        mg: fd.mg || ''
+      };
+      if(pendingShortcut){
+        const text = formatEntryForNotes(displayEntry);
+        // Reset flag before navigation
+        pendingShortcut = false;
+        // Give the UI a tick to save & render before jumping
+        setTimeout(()=> openShortcutWithText(text), 50);
+      }
+    });
+  </script>
+</body>
+</html>
