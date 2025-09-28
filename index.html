@@ -140,14 +140,14 @@
             <div class="hint">Sends:</div>
             <div class="hint">D/M/YYYY + <code>#changewater</code></div>
             <div class="spacer"></div>
-            <button class="btn primary" id="changeWaterBtn">Send</button>
+            <button type="button" class="btn primary" id="changeWaterBtn">Send</button>
           </div>
         </div>
         <div class="card">
           <h3>Send All Doses</h3>
           <div class="hint">Sends KH + Ca + Mg in one note</div>
           <div class="spacer"></div>
-          <button class="btn ghost" id="sendAllDosesBtn">Send All → Notes</button>
+          <button type="button" class="btn ghost" id="sendAllDosesBtn">Send All → Notes</button>
         </div>
         <div class="card">
           <h3>Today</h3>
@@ -161,13 +161,13 @@
           <h3>KH Droplet (ml/day)</h3>
           <div class="dose-row">
             <div class="dose-ctl">
-              <button class="icon-btn" id="khMinus" aria-label="Decrease">−</button>
-              <button class="icon-btn" id="khZero" aria-label="Reset to 0">0</button>
-              <button class="icon-btn" id="khPlus" aria-label="Increase">+</button>
+              <button type="button" class="icon-btn" id="khMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="khZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="khPlus" aria-label="Increase">+</button>
             </div>
             <select id="khDose" style="max-width:120px"></select>
             <div class="spacer"></div>
-            <button class="btn ghost" id="khDoseBtn">Send → Notes</button>
+            <button type="button" class="btn ghost" id="khDoseBtn">Send → Notes</button>
           </div>
           <div class="hint">Example: <code>23/9/2025</code> + <code>KH droplet at 2ml per day</code></div>
         </div>
@@ -176,13 +176,13 @@
           <h3>Ca Droplet (ml/day)</h3>
           <div class="dose-row">
             <div class="dose-ctl">
-              <button class="icon-btn" id="caMinus" aria-label="Decrease">−</button>
-              <button class="icon-btn" id="caZero" aria-label="Reset to 0">0</button>
-              <button class="icon-btn" id="caPlus" aria-label="Increase">+</button>
+              <button type="button" class="icon-btn" id="caMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="caZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="caPlus" aria-label="Increase">+</button>
             </div>
             <select id="caDose" style="max-width:120px"></select>
             <div class="spacer"></div>
-            <button class="btn ghost" id="caDoseBtn">Send → Notes</button>
+            <button type="button" class="btn ghost" id="caDoseBtn">Send → Notes</button>
           </div>
         </div>
 
@@ -190,13 +190,13 @@
           <h3>Mg Droplet (ml/day)</h3>
           <div class="dose-row">
             <div class="dose-ctl">
-              <button class="icon-btn" id="mgMinus" aria-label="Decrease">−</button>
-              <button class="icon-btn" id="mgZero" aria-label="Reset to 0">0</button>
-              <button class="icon-btn" id="mgPlus" aria-label="Increase">+</button>
+              <button type="button" class="icon-btn" id="mgMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="mgZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="mgPlus" aria-label="Increase">+</button>
             </div>
             <select id="mgDose" style="max-width:120px"></select>
             <div class="spacer"></div>
-            <button class="btn ghost" id="mgDoseBtn">Send → Notes</button>
+            <button type="button" class="btn ghost" id="mgDoseBtn">Send → Notes</button>
           </div>
         </div>
       </div>
@@ -344,7 +344,8 @@
 
   // ---------- Maintenance actions ----------
   if (changeWaterBtn) {
-    changeWaterBtn.addEventListener('click', ()=>{
+    changeWaterBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
       const iso = (document.getElementById('date')?.value) || todayLocalISO();
       const display = formatDMYSlash(iso);
       const text = `${display}\n#changewater`;
@@ -366,15 +367,15 @@
     sel.value = String(next);
   }
   // Steppers
-  if(khMinus) khMinus.addEventListener('click', ()=> adjustDose(khDose, -1));
-  if(khPlus)  khPlus.addEventListener('click', ()=> adjustDose(khDose,  1));
-  if(khZero)  khZero.addEventListener('click', ()=> { khDose.value = '0'; });
-  if(caMinus) caMinus.addEventListener('click', ()=> adjustDose(caDose, -1));
-  if(caPlus)  caPlus.addEventListener('click', ()=> adjustDose(caDose,  1));
-  if(caZero)  caZero.addEventListener('click', ()=> { caDose.value = '0'; });
-  if(mgMinus) mgMinus.addEventListener('click', ()=> adjustDose(mgDose, -1));
-  if(mgPlus)  mgPlus.addEventListener('click', ()=> adjustDose(mgDose,  1));
-  if(mgZero)  mgZero.addEventListener('click', ()=> { mgDose.value = '0'; });
+  if(khMinus) khMinus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(khDose, -1); });
+  if(khPlus)  khPlus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(khDose,  1); });
+  if(khZero)  khZero.addEventListener('click', (e)=>{ e.preventDefault(); khDose.value = '0'; });
+  if(caMinus) caMinus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(caDose, -1); });
+  if(caPlus)  caPlus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(caDose,  1); });
+  if(caZero)  caZero.addEventListener('click', (e)=>{ e.preventDefault(); caDose.value = '0'; });
+  if(mgMinus) mgMinus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(mgDose, -1); });
+  if(mgPlus)  mgPlus.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(mgDose,  1); });
+  if(mgZero)  mgZero.addEventListener('click', (e)=>{ e.preventDefault(); mgDose.value = '0'; });
 
   function sendDroplet(kind, sel){
     const val = Number(sel?.value ?? '');
@@ -383,12 +384,13 @@
     const display = formatDMYSlash(iso);
     openShortcutWithText(`${display}\n${formatDropletLine(kind, amount)}`);
   }
-  if(khDoseBtn) khDoseBtn.addEventListener('click', ()=> sendDroplet('KH', khDose));
-  if(caDoseBtn) caDoseBtn.addEventListener('click', ()=> sendDroplet('Ca', caDose));
-  if(mgDoseBtn) mgDoseBtn.addEventListener('click', ()=> sendDroplet('Mg', mgDose));
+  if(khDoseBtn) khDoseBtn.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('KH', khDose); });
+  if(caDoseBtn) caDoseBtn.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('Ca', caDose); });
+  if(mgDoseBtn) mgDoseBtn.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('Mg', mgDose); });
 
   if (sendAllDosesBtn){
-    sendAllDosesBtn.addEventListener('click', ()=>{
+    sendAllDosesBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
       const iso = (document.getElementById('date')?.value) || todayLocalISO();
       const dmy = formatDMYSlash(iso);
       const lines = [dmy];
