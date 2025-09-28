@@ -10,17 +10,19 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#0b1020 0%,#0e1430 100%);color:var(--ink)}
-    .wrap{max-width:1100px;margin:0 auto;padding:28px}
-    h1{margin:0 0 12px;font-size:clamp(22px,3.5vw,36px)}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    h1{margin:0 0 12px;font-size:clamp(22px,3.5vw,34px)}
     .muted{color:var(--muted)}
     .panel{background:var(--panel);border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
     .grid{display:grid;gap:12px}
     .grid.cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
-    @media (max-width:900px){.grid.cols-6{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media (max-width:640px){.grid.cols-6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media (max-width:900px){.grid.cols-6{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){.grid.cols-6,.grid.cols-3{grid-template-columns:repeat(1,minmax(0,1fr))}}
     label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
     input,button,select{font:inherit}
-    input[type="date"], select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
+    input[type="date"], select, input[type="number"]{width:100%;padding:12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
     select:focus,input:focus{border-color:var(--accent)}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .btn{border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
@@ -30,18 +32,20 @@
     .btn.danger{background:var(--danger);color:#fff}
     .btn:disabled{opacity:.6;cursor:not-allowed}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-    table{width:100%;border-collapse:separate;border-spacing:0 8px}
-    th,td{text-align:left;padding:10px 12px}
-    thead th{font-size:12px;color:var(--muted)}
-    tbody tr{background:#0f1733}
-    tbody td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
-    tbody td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
     .hint{font-size:11px;color:#bcd0ff;opacity:.85}
     footer{margin-top:18px;color:#94a8ff;font-size:12px;opacity:.8}
     .right{margin-left:auto}
     details.dev summary{cursor:pointer}
     .dev-pass{color:#21d19f}
     .dev-fail{color:#ff5a78}
+
+    /* Maintenance cards */
+    .card{background:#0f1733;border:1px solid #223061;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .card h3{margin:0;font-size:14px;color:#d7e3ff}
+    .dose-row{display:flex;gap:8px;align-items:center}
+    .dose-ctl{display:flex;gap:6px}
+    .icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid #223061;background:transparent;color:var(--ink);font-size:18px;line-height:1}
+    .spacer{flex:1}
   </style>
 </head>
 <body>
@@ -49,16 +53,17 @@
     <header class="row" style="align-items:center">
       <div>
         <h1>Reef Chemistry Logger</h1>
-        <div class="muted">Track NO₃, PO₄, KH, Ca, Mg — saved locally in your browser.</div>
+        <div class="muted">Quickly record test values & maintenance actions. Notes are sent to your iPhone Shortcut.</div>
       </div>
       <div class="right toolbar">
         <button class="btn ghost" id="exportBtn" title="Export CSV">Export CSV</button>
         <label for="importInput" class="btn ghost" style="cursor:pointer" title="Import CSV">Import CSV</label>
         <input id="importInput" type="file" accept=".csv" style="display:none" />
-        <button class="btn ghost" id="clearAllBtn" title="Clear data">Clear All</button>
+        <button class="btn ghost" id="clearAllBtn" title="Clear saved entries in this browser">Clear All</button>
       </div>
     </header>
 
+    <!-- Entry form (kept) -->
     <section class="panel" style="margin-top:16px">
       <form id="entryForm" class="grid cols-6" autocomplete="off">
         <div>
@@ -118,29 +123,82 @@
       <div id="warnBox" style="margin-top:8px"></div>
     </section>
 
+    <!-- Log panel REMOVED as requested -->
+
+    <!-- Redesigned Maintenance -->
     <section class="panel" style="margin-top:16px">
-      <div class="row" style="align-items:center; margin-bottom:8px">
-        <strong>Log</strong>
-        <div class="right toolbar">
-          <select id="sortSelect" title="Sort order">
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
-          <input type="text" id="search" placeholder="Search date or value…" />
+      <div class="row" style="align-items:center; justify-content:space-between; margin-bottom:6px">
+        <strong>Maintenance</strong>
+        <div class="hint">All actions send a two‑line record to your Shortcut <code>SaveToReefTankData</code>.</div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="grid cols-3" style="margin-bottom:12px">
+        <div class="card">
+          <h3>Change Water</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>#changewater</code></div>
+            <div class="spacer"></div>
+            <button class="btn primary" id="changeWaterBtn">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Send All Doses</h3>
+          <div class="hint">Sends KH + Ca + Mg in one note</div>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="sendAllDosesBtn">Send All → Notes</button>
+        </div>
+        <div class="card">
+          <h3>Today</h3>
+          <div class="hint">Uses the date field above; change it there if needed.</div>
         </div>
       </div>
-      <div style="overflow:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th><th>NO₃</th><th>PO₄</th><th>KH</th><th>Ca</th><th>Mg</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-      <div class="row" style="justify-content:flex-end; margin-top:10px">
-        <button class="btn warn" id="sendLatestBtn" title="Send the newest log row to iPhone Notes via Shortcut">Send Latest → Notes</button>
+
+      <!-- Dosing cards -->
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>KH Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button class="icon-btn" id="khMinus" aria-label="Decrease">−</button>
+              <button class="icon-btn" id="khZero" aria-label="Reset to 0">0</button>
+              <button class="icon-btn" id="khPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="khDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button class="btn ghost" id="khDoseBtn">Send → Notes</button>
+          </div>
+          <div class="hint">Example: <code>23/9/2025</code> + <code>KH droplet at 2ml per day</code></div>
+        </div>
+
+        <div class="card">
+          <h3>Ca Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button class="icon-btn" id="caMinus" aria-label="Decrease">−</button>
+              <button class="icon-btn" id="caZero" aria-label="Reset to 0">0</button>
+              <button class="icon-btn" id="caPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="caDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button class="btn ghost" id="caDoseBtn">Send → Notes</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Mg Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button class="icon-btn" id="mgMinus" aria-label="Decrease">−</button>
+              <button class="icon-btn" id="mgZero" aria-label="Reset to 0">0</button>
+              <button class="icon-btn" id="mgPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="mgDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button class="btn ghost" id="mgDoseBtn">Send → Notes</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -151,328 +209,298 @@
     </details>
 
     <footer>
-      Pro tip: Click ✎ to edit a row. Data is stored in <code>localStorage</code> (this browser only).
+      Data is stored in <code>localStorage</code> (this browser only). Export CSV to back up.
     </footer>
   </div>
 
   <script>
-    // ---------- Utilities ----------
-    const $ = (sel, el=document) => el.querySelector(sel);
-    const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
-    const pad = n => String(n).padStart(2,'0');
-    const todayLocalISO = () => {
+  // ---------- Utilities ----------
+  const $ = (sel, el=document) => el.querySelector(sel);
+  const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+  const pad = n => String(n).padStart(2,'0');
+  const todayLocalISO = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  };
+  const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+  const toNumber = v => (v===undefined||v===null||v==='') ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
+
+  // ---------- Storage ----------
+  const KEY = 'reefChemEntries.v1';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY))||[] } catch { return [] } };
+  const save = (data) => localStorage.setItem(KEY, JSON.stringify(data));
+
+  // ---------- State ----------
+  let entries = load();
+  let editingId = null;
+  let pendingShortcut = false;
+
+  // ---------- DOM ----------
+  const form = $('#entryForm');
+  const resetBtn = $('#resetBtn');
+  const saveAndNotesBtn = $('#saveAndNotesBtn');
+  const exportBtn = $('#exportBtn');
+  const importInput = $('#importInput');
+  const clearAllBtn = $('#clearAllBtn');
+  const testsDiv = $('#tests');
+  const changeWaterBtn = $('#changeWaterBtn');
+  const sendAllDosesBtn = $('#sendAllDosesBtn');
+
+  // Dosing controls
+  const khDose = $('#khDose');
+  const caDose = $('#caDose');
+  const mgDose = $('#mgDose');
+  const khDoseBtn = $('#khDoseBtn');
+  const caDoseBtn = $('#caDoseBtn');
+  const mgDoseBtn = $('#mgDoseBtn');
+  const khMinus = $('#khMinus'); const khPlus = $('#khPlus'); const khZero = $('#khZero');
+  const caMinus = $('#caMinus'); const caPlus = $('#caPlus'); const caZero = $('#caZero');
+  const mgMinus = $('#mgMinus'); const mgPlus = $('#mgPlus'); const mgZero = $('#mgZero');
+
+  // Init date
+  $('#date').value = todayLocalISO();
+
+  // ---------- iOS Shortcuts helpers ----------
+  function openShortcutWithText(text){
+    const shortcutName = 'SaveToReefTankData';
+    const url = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(text)}`;
+    window.location.href = url;
+  }
+  function formatEntryForNotes({date,no3,po4,kh,ca,mg}){
+    const v = x => (x===undefined || x===null || x==='') ? '-' : x;
+    return `Reef Log — ${date}\nNO3: ${v(no3)}\nPO4: ${v(po4)}\nKH: ${v(kh)}\nCa: ${v(ca)}\nMg: ${v(mg)}`;
+  }
+  function formatDMYSlash(iso){
+    if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)){
       const d = new Date();
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    }
+    const [y,m,d] = iso.split('-').map(Number);
+    return `${d}/${m}/${y}`;
+  }
+  function formatDropletLine(label, amount){
+    return `${label} droplet at ${amount}ml per day`;
+  }
+
+  // ---------- Submit (Save) ----------
+  form.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    const displayEntry = {
+      date: data.date || todayLocalISO(),
+      no3: data.no3 || '',
+      po4: data.po4 || '',
+      kh: data.kh || '',
+      ca: data.ca || '',
+      mg: data.mg || ''
     };
-    const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
-    const toNumber = v => (v===undefined||v===null||v==='') ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
+    const entry = {
+      id: editingId || uid(),
+      date: displayEntry.date,
+      no3: toNumber((data.no3||'').replace('>','')),
+      po4: toNumber(data.po4),
+      kh: toNumber(data.kh),
+      ca: toNumber(data.ca),
+      mg: toNumber(data.mg),
+      no3Disp: displayEntry.no3 || null,
+      po4Disp: displayEntry.po4 || null,
+      khDisp: displayEntry.kh || null,
+      createdAt: editingId ? (entries.find(x=>x.id===editingId)?.createdAt || Date.now()) : Date.now(),
+      updatedAt: Date.now()
+    };
+    if(editingId){ entries = entries.map(e=> e.id===editingId ? entry : e); } else { entries.push(entry); }
+    save(entries);
 
-    // ---------- Storage ----------
-    const KEY = 'reefChemEntries.v1';
-    const load = () => { try { return JSON.parse(localStorage.getItem(KEY))||[] } catch { return [] } };
-    const save = (data) => localStorage.setItem(KEY, JSON.stringify(data));
+    if(pendingShortcut){
+      pendingShortcut = false;
+      const text = formatEntryForNotes(displayEntry);
+      setTimeout(()=> openShortcutWithText(text), 30);
+    }
 
-    // ---------- State ----------
-    let entries = load();
-    let editingId = null;
-    let pendingShortcut = false;
-
-    // ---------- DOM ----------
-    const form = $('#entryForm');
-    const tbody = $('#tbody');
-    const sortSelect = $('#sortSelect');
-    const search = $('#search');
-    const resetBtn = $('#resetBtn');
-    const saveAndNotesBtn = $('#saveAndNotesBtn');
-    const sendLatestBtn = $('#sendLatestBtn');
-    const exportBtn = $('#exportBtn');
-    const importInput = $('#importInput');
-    const clearAllBtn = $('#clearAllBtn');
-    const testsDiv = $('#tests');
-
-    // Init date
+    form.reset();
     $('#date').value = todayLocalISO();
+    editingId = null;
+    $('#saveBtn').textContent = 'Save';
+  });
 
-    // ---------- iOS Shortcuts helpers ----------
-    function openShortcutWithText(text){
-      const shortcutName = 'SaveToReefTankData';
-      const url = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(text)}`;
-      window.location.href = url; // iOS Safari will switch to Shortcuts
-    }
-    function formatEntryForNotes({date,no3,po4,kh,ca,mg}){
-      const v = x => (x===undefined || x===null || x==='') ? '-' : x;
-      return `Reef Log — ${date}\nNO3: ${v(no3)}\nPO4: ${v(po4)}\nKH: ${v(kh)}\nCa: ${v(ca)}\nMg: ${v(mg)}`;
-    }
+  if (saveAndNotesBtn) {
+    saveAndNotesBtn.addEventListener('click', ()=>{ pendingShortcut = true; form.requestSubmit(); });
+  }
 
-    // ---------- Submit (Save) ----------
-    form.addEventListener('submit', (ev)=>{
-      ev.preventDefault();
-      const data = Object.fromEntries(new FormData(form).entries());
-
-      // Capture display strings BEFORE normalization (keep ">10")
-      const displayEntry = {
-        date: data.date || todayLocalISO(),
-        no3: data.no3 || '',
-        po4: data.po4 || '',
-        kh: data.kh || '',
-        ca: data.ca || '',
-        mg: data.mg || ''
-      };
-
-      // Normalize for storage (strip '>')
-      const entry = {
-        id: editingId || uid(),
-        date: displayEntry.date,
-        no3: toNumber((data.no3||'').replace('>','')),
-        po4: toNumber(data.po4),
-        kh: toNumber(data.kh),
-        ca: toNumber(data.ca),
-        mg: toNumber(data.mg),
-        // keep display copies for rendering/export
-        no3Disp: displayEntry.no3 || null,
-        po4Disp: displayEntry.po4 || null,
-        khDisp: displayEntry.kh || null,
-        createdAt: editingId ? (entries.find(x=>x.id===editingId)?.createdAt || Date.now()) : Date.now(),
-        updatedAt: Date.now()
-      };
-
-      if(editingId){
-        entries = entries.map(e=> e.id===editingId ? entry : e);
-      } else {
-        entries.push(entry);
-      }
-      save(entries);
-      render();
-
-      if(pendingShortcut){
-        pendingShortcut = false;
-        const text = formatEntryForNotes(displayEntry);
-        setTimeout(()=> openShortcutWithText(text), 30);
-      }
-
+  if (resetBtn) {
+    resetBtn.addEventListener('click', ()=>{
       form.reset();
       $('#date').value = todayLocalISO();
       editingId = null;
       $('#saveBtn').textContent = 'Save';
     });
+  }
 
-    // Save → Notes triggers submit then opens Shortcuts with the captured values
-    if (saveAndNotesBtn) {
-      saveAndNotesBtn.addEventListener('click', ()=>{ pendingShortcut = true; form.requestSubmit(); });
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener('click', ()=>{
+      if(confirm('Delete ALL entries?')){ entries = []; save(entries); }
+    });
+  }
+
+  // ---------- Maintenance actions ----------
+  if (changeWaterBtn) {
+    changeWaterBtn.addEventListener('click', ()=>{
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const display = formatDMYSlash(iso);
+      const text = `${display}\n#changewater`;
+      openShortcutWithText(text);
+    });
+  }
+
+  function fillDoseSelect(sel){
+    if(!sel) return;
+    sel.innerHTML = '<option value="">—</option>' + Array.from({length:31},(_,i)=>i-15).map(n=>`<option value="${n}" ${n===0?'selected':''}>${n}</option>`).join('');
+  }
+  [khDose, caDose, mgDose].forEach(fillDoseSelect);
+
+  function adjustDose(sel, delta){
+    if(!sel) return;
+    const current = Number(sel.value || 0);
+    let next = current + delta;
+    next = Math.max(-15, Math.min(15, next));
+    sel.value = String(next);
+  }
+  // Steppers
+  if(khMinus) khMinus.addEventListener('click', ()=> adjustDose(khDose, -1));
+  if(khPlus)  khPlus.addEventListener('click', ()=> adjustDose(khDose,  1));
+  if(khZero)  khZero.addEventListener('click', ()=> { khDose.value = '0'; });
+  if(caMinus) caMinus.addEventListener('click', ()=> adjustDose(caDose, -1));
+  if(caPlus)  caPlus.addEventListener('click', ()=> adjustDose(caDose,  1));
+  if(caZero)  caZero.addEventListener('click', ()=> { caDose.value = '0'; });
+  if(mgMinus) mgMinus.addEventListener('click', ()=> adjustDose(mgDose, -1));
+  if(mgPlus)  mgPlus.addEventListener('click', ()=> adjustDose(mgDose,  1));
+  if(mgZero)  mgZero.addEventListener('click', ()=> { mgDose.value = '0'; });
+
+  function sendDroplet(kind, sel){
+    const val = Number(sel?.value ?? '');
+    const amount = Number.isFinite(val) ? val : 0;
+    const iso = (document.getElementById('date')?.value) || todayLocalISO();
+    const display = formatDMYSlash(iso);
+    openShortcutWithText(`${display}\n${formatDropletLine(kind, amount)}`);
+  }
+  if(khDoseBtn) khDoseBtn.addEventListener('click', ()=> sendDroplet('KH', khDose));
+  if(caDoseBtn) caDoseBtn.addEventListener('click', ()=> sendDroplet('Ca', caDose));
+  if(mgDoseBtn) mgDoseBtn.addEventListener('click', ()=> sendDroplet('Mg', mgDose));
+
+  if (sendAllDosesBtn){
+    sendAllDosesBtn.addEventListener('click', ()=>{
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const dmy = formatDMYSlash(iso);
+      const lines = [dmy];
+      const trip = [
+        ['KH', Number(khDose?.value ?? 0)],
+        ['Ca', Number(caDose?.value ?? 0)],
+        ['Mg', Number(mgDose?.value ?? 0)]
+      ];
+      trip.forEach(([k,v])=>{ if(Number.isFinite(v)) lines.push(formatDropletLine(k, v)); });
+      openShortcutWithText(lines.join('\n'));
+    })
+  }
+
+  // ---------- Export / Import (CSV) ----------
+  function toCSV(rows){
+    const header = ['date','no3','po4','kh','ca','mg','no3Disp','po4Disp','khDisp'];
+    const lines = [header.join(',')];
+    rows.forEach(e=>{
+      lines.push([
+        e.date,
+        e.no3 ?? '', e.po4 ?? '', e.kh ?? '', e.ca ?? '', e.mg ?? '',
+        e.no3Disp ?? '', e.po4Disp ?? '', e.khDisp ?? ''
+      ].join(','));
+    });
+    return lines.join('\n');
+  }
+  function download(filename, text){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
+    a.download = filename; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  }
+  if(exportBtn){
+    exportBtn.addEventListener('click', ()=>{
+      const csv = toCSV(entries);
+      const stamp = new Date().toISOString().slice(0,10);
+      download(`reef-chemistry-${stamp}.csv`, csv);
+    });
+  }
+  if(importInput){
+    importInput.addEventListener('change', async (ev)=>{
+      const file = ev.target.files?.[0];
+      if(!file) return;
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      const [h, ...rest] = lines;
+      const cols = h.split(',').map(s=>s.trim().toLowerCase());
+      const idx = Object.fromEntries(cols.map((c,i)=>[c,i]));
+      const get = (parts, key) => parts[idx[key]] ?? '';
+      const imported = rest.map(line=>{
+        const parts = line.split(',');
+        return {
+          id: uid(),
+          date: (get(parts,'date')||'').slice(0,10),
+          no3: toNumber((get(parts,'no3')||'').replace('>','')),
+          po4: toNumber(get(parts,'po4')),
+          kh: toNumber(get(parts,'kh')),
+          ca: toNumber(get(parts,'ca')),
+          mg: toNumber(get(parts,'mg')),
+          no3Disp: get(parts,'no3disp') || null,
+          po4Disp: get(parts,'po4disp') || null,
+          khDisp: get(parts,'khdisp') || null,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        }
+      }).filter(e=> e.date);
+      if(!imported.length){ alert('No valid rows found.'); return; }
+      if(!confirm(`Import ${imported.length} rows?`)) return;
+      entries = entries.concat(imported);
+      save(entries);
+    });
+  }
+
+  // ---------- Self tests ----------
+  function runTests(){
+    const results = [];
+    const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
+
+    // Elements exist (log removed intentionally)
+    const ids = ['entryForm','date','no3','po4','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn'];
+    ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
+
+    // IDs are globally unique
+    const allIds = [...document.querySelectorAll('[id]')].map(n=>n.id);
+    const uniqueIds = new Set(allIds);
+    assert('All IDs are unique', uniqueIds.size === allIds.length, `Duplicate IDs: ${allIds.filter((id,i)=> allIds.indexOf(id)!==i).join(', ')}`);
+
+    // Shortcuts URL formed (simple)
+    const okURL = (()=>{
+      const name = 'SaveToReefTankData';
+      const txt = 'test';
+      const url = `shortcuts://run-shortcut?name=${encodeURIComponent(name)}&input=text&text=${encodeURIComponent(txt)}`;
+      return url.startsWith('shortcuts://run-shortcut?');
+    })();
+    assert('Shortcuts URL generated', okURL);
+
+    // D/M/YYYY formatting
+    const dmy = formatDMYSlash('2025-09-23');
+    assert('formatDMYSlash => 23/9/2025', dmy === '23/9/2025', dmy);
+
+    // Dose sample payloads
+    const sample = `${'23/9/2025'}\n${formatDropletLine('KH',2)}`;
+    assert('Dose payload example', sample === '23/9/2025\nKH droplet at 2ml per day', sample);
+
+    if(testsDiv){
+      testsDiv.innerHTML = '<ul>'+results.map(r=>`<li class="${r.ok?'dev-pass':'dev-fail'}">${r.ok?'✓':'✗'} ${r.name}${r.msg?` — ${r.msg}`:''}</li>`).join('')+'</ul>';
     }
+    console.table(results);
+    return results.every(r=>r.ok);
+  }
 
-    // Reset
-    if (resetBtn) {
-      resetBtn.addEventListener('click', ()=>{
-        form.reset();
-        $('#date').value = todayLocalISO();
-        editingId = null;
-        $('#saveBtn').textContent = 'Save';
-      });
-    }
-
-    // Clear all
-    if (clearAllBtn) {
-      clearAllBtn.addEventListener('click', ()=>{
-        if(confirm('Delete ALL entries?')){ entries = []; save(entries); render(); }
-      });
-    }
-
-    // Send newest row to Notes (button under the table)
-    if (sendLatestBtn) {
-      sendLatestBtn.addEventListener('click', ()=>{
-        if(!entries.length){ alert('No rows yet. Save one first.'); return; }
-        const newest = [...entries].sort((a,b)=> b.date.localeCompare(a.date))[0];
-        const text = formatEntryForNotes({
-          date: newest.date,
-          no3: newest.no3Disp ?? newest.no3 ?? '',
-          po4: newest.po4Disp ?? newest.po4 ?? '',
-          kh: newest.khDisp ?? newest.kh ?? '',
-          ca: newest.ca ?? '',
-          mg: newest.mg ?? ''
-        });
-        openShortcutWithText(text);
-      });
-    }
-
-    // ---------- Table rendering ----------
-    sortSelect.addEventListener('change', render);
-    search.addEventListener('input', render);
-
-    function render(){
-      const term = search.value.trim().toLowerCase();
-      const sorted = [...entries].sort((a,b)=> sortSelect.value==='asc' ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
-      const filtered = term ? sorted.filter(e=> JSON.stringify(e).toLowerCase().includes(term)) : sorted;
-      tbody.innerHTML = filtered.map(e=> rowHTML(e)).join('');
-      // Wire row buttons
-      $$('#tbody button[data-id]').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const id = btn.getAttribute('data-id');
-          const action = btn.getAttribute('data-action');
-          const e = entries.find(x=>x.id===id);
-          if(!e) return;
-          if(action==='edit'){
-            editingId = id;
-            $('#date').value = e.date;
-            $('#no3').value = (e.no3Disp ?? e.no3 ?? '').toString();
-            $('#po4').value = (e.po4Disp ?? e.po4 ?? '').toString();
-            $('#kh').value = (e.khDisp ?? e.kh ?? '').toString();
-            $('#ca').value = (e.ca ?? '').toString();
-            $('#mg').value = (e.mg ?? '').toString();
-            $('#saveBtn').textContent = 'Update';
-            window.scrollTo({top:0,behavior:'smooth'});
-          } else if(action==='delete'){
-            if(confirm('Delete this entry?')){ entries = entries.filter(x=>x.id!==id); save(entries); render(); }
-          }
-        });
-      });
-    }
-
-    function rowHTML(e){
-      const v = (raw,num)=> (raw ?? num ?? '—');
-      return `<tr>
-        <td>${e.date}</td>
-        <td>${v(e.no3Disp, e.no3)}</td>
-        <td>${v(e.po4Disp, e.po4)}</td>
-        <td>${v(e.khDisp, e.kh)}</td>
-        <td>${e.ca ?? '—'}</td>
-        <td>${e.mg ?? '—'}</td>
-        <td style="text-align:right">
-          <button class="btn ghost" data-action="edit" data-id="${e.id}" title="Edit">✎</button>
-          <button class="btn ghost" data-action="delete" data-id="${e.id}" title="Delete">🗑️</button>
-        </td>
-      </tr>`;
-    }
-
-    // ---------- Export / Import (CSV) ----------
-    function toCSV(rows){
-      const header = ['date','no3','po4','kh','ca','mg','no3Disp','po4Disp','khDisp'];
-      const lines = [header.join(',')];
-      rows.forEach(e=>{
-        lines.push([
-          e.date,
-          e.no3 ?? '', e.po4 ?? '', e.kh ?? '', e.ca ?? '', e.mg ?? '',
-          e.no3Disp ?? '', e.po4Disp ?? '', e.khDisp ?? ''
-        ].join(','));
-      });
-      return lines.join('\n');
-    }
-    function download(filename, text){
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'}));
-      a.download = filename; a.click();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    }
-    if(exportBtn){
-      exportBtn.addEventListener('click', ()=>{
-        const csv = toCSV(entries);
-        const stamp = new Date().toISOString().slice(0,10);
-        download(`reef-chemistry-${stamp}.csv`, csv);
-      });
-    }
-    if(importInput){
-      importInput.addEventListener('change', async (ev)=>{
-        const file = ev.target.files?.[0];
-        if(!file) return;
-        const text = await file.text();
-        const lines = text.split(/\r?\n/).filter(Boolean);
-        const [h, ...rest] = lines;
-        const cols = h.split(',').map(s=>s.trim().toLowerCase());
-        const idx = Object.fromEntries(cols.map((c,i)=>[c,i]));
-        const get = (parts, key) => parts[idx[key]] ?? '';
-        const imported = rest.map(line=>{
-          const parts = line.split(',');
-          return {
-            id: uid(),
-            date: (get(parts,'date')||'').slice(0,10),
-            no3: toNumber((get(parts,'no3')||'').replace('>','')),
-            po4: toNumber(get(parts,'po4')),
-            kh: toNumber(get(parts,'kh')),
-            ca: toNumber(get(parts,'ca')),
-            mg: toNumber(get(parts,'mg')),
-            no3Disp: get(parts,'no3disp') || null,
-            po4Disp: get(parts,'po4disp') || null,
-            khDisp: get(parts,'khdisp') || null,
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
-        }).filter(e=> e.date);
-        if(!imported.length){ alert('No valid rows found.'); return; }
-        if(!confirm(`Import ${imported.length} rows?`)) return;
-        entries = entries.concat(imported);
-        save(entries); render();
-        ev.target.value = '';
-      });
-    }
-
-    // ---------- Self tests ----------
-    function runTests(){
-      const results = [];
-      const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
-
-      // Elements exist
-      const ids = ['entryForm','date','no3','po4','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','sortSelect','search','exportBtn','importInput','clearAllBtn','tbody','sendLatestBtn'];
-      ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
-
-      // IDs are globally unique
-      const allIds = [...document.querySelectorAll('[id]')].map(n=>n.id);
-      const uniqueIds = new Set(allIds);
-      assert('All IDs are unique', uniqueIds.size === allIds.length, `Duplicate IDs: ${allIds.filter((id,i)=> allIds.indexOf(id)!==i).join(', ')}`);
-
-      // CSV newline test
-      const sampleCSV = toCSV([{date:'2025-09-28', no3:1}]);
-      assert('CSV contains newline', sampleCSV.includes('\n'));
-      assert('CSV has at least 2 lines', sampleCSV.split('\n').length >= 2);
-
-      // Import split handles CRLF and LF
-      const testText = 'date,no3\r\n2025-09-28,1\n2025-09-29,2';
-      const pieces = testText.split(/\r?\n/);
-      assert('CRLF/LF split works', pieces.length === 3);
-
-      // Shortcuts URL formed
-      const urlOK = (()=>{
-        const txt = formatEntryForNotes({date:'2025-09-28',no3:'>10',po4:'0.03',kh:'8',ca:'430',mg:'1350'});
-        const name = 'SaveToReefTankData';
-        const url = `shortcuts://run-shortcut?name=${encodeURIComponent(name)}&input=text&text=${encodeURIComponent(txt)}`;
-        return url.startsWith('shortcuts://run-shortcut?');
-      })();
-      assert('Shortcuts URL generated', urlOK);
-
-      // No duplicate critical IDs (explicit)
-      const dupReset = document.querySelectorAll('#resetBtn').length;
-      const dupSave = document.querySelectorAll('#saveBtn').length;
-      assert('Unique #resetBtn', dupReset === 1, `Found ${dupReset}`);
-      assert('Unique #saveBtn', dupSave === 1, `Found ${dupSave}`);
-
-      // todayLocalISO format
-      const t = todayLocalISO();
-      assert('todayLocalISO format YYYY-MM-DD', /^\d{4}-\d{2}-\d{2}$/.test(t));
-
-      // Storage round-trip (non-destructive)
-      const prev = localStorage.getItem(KEY);
-      try {
-        const testRows = [{id:'t1', date:'2025-09-28', no3:1, po4:0.03, kh:8, ca:430, mg:1350}];
-        save(testRows);
-        const loaded = load();
-        assert('storage round-trip works', Array.isArray(loaded) && loaded[0]?.date==='2025-09-28');
-      } finally {
-        if(prev===null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, prev);
-      }
-
-      // Render should not throw
-      try { render(); assert('Render executed', true); } catch(e){ assert('Render executed', false, e.message); }
-
-      // Show results
-      if(testsDiv){
-        testsDiv.innerHTML = '<ul>'+results.map(r=>`<li class="${r.ok?'dev-pass':'dev-fail'}">${r.ok?'✓':'✗'} ${r.name}${r.msg?` — ${r.msg}`:''}</li>`).join('')+'</ul>';
-      }
-      console.table(results);
-      return results.every(r=>r.ok);
-    }
-
-    // First paint and tests
-    render();
-    runTests();
+  runTests();
   </script>
 </body>
 </html>
