@@ -123,9 +123,7 @@
       <div id="warnBox" style="margin-top:8px"></div>
     </section>
 
-    <!-- Log panel REMOVED as requested -->
-
-    <!-- Redesigned Maintenance -->
+    <!-- Maintenance -->
     <section class="panel" style="margin-top:16px">
       <div class="row" style="align-items:center; justify-content:space-between; margin-bottom:6px">
         <strong>Maintenance</strong>
@@ -156,7 +154,7 @@
       </div>
 
       <!-- Dosing cards -->
-      <div class="grid cols-3">
+      <div class="grid cols-3" style="margin-bottom:12px">
         <div class="card">
           <h3>KH Droplet (ml/day)</h3>
           <div class="dose-row">
@@ -198,6 +196,43 @@
             <div class="spacer"></div>
             <button type="button" class="btn ghost" id="mgDoseBtn">Send → Notes</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Other actions (NEW) -->
+      <div class="grid cols-3">
+        <div class="card">
+          <h3>加魚糧（匙）</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="foodMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="foodZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="foodPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="foodSpoons" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="foodSendBtn">Send → Notes</button>
+          </div>
+          <div class="hint">格式：<code>D/M/YYYY</code> + <code>加魚糧 X 匙</code></div>
+        </div>
+        <div class="card">
+          <h3>油膜</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>水面有油膜</code></div>
+            <div class="spacer"></div>
+            <button type="button" class="btn primary" id="surfaceFilmBtn">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>更換過濾棉</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>更換過濾棉</code></div>
+            <div class="spacer"></div>
+            <button type="button" class="btn primary" id="filterFlossBtn">Send</button>
+          </div>
+          <div class="hint">（你之前常用「換綿」也可以，見腳本）</div>
         </div>
       </div>
     </section>
@@ -256,6 +291,13 @@
   const khMinus = $('#khMinus'); const khPlus = $('#khPlus'); const khZero = $('#khZero');
   const caMinus = $('#caMinus'); const caPlus = $('#caPlus'); const caZero = $('#caZero');
   const mgMinus = $('#mgMinus'); const mgPlus = $('#mgPlus'); const mgZero = $('#mgZero');
+
+  // NEW: other actions
+  const foodSpoons = $('#foodSpoons');
+  const foodMinus = $('#foodMinus'); const foodPlus = $('#foodPlus'); const foodZero = $('#foodZero');
+  const foodSendBtn = $('#foodSendBtn');
+  const surfaceFilmBtn = $('#surfaceFilmBtn');
+  const filterFlossBtn = $('#filterFlossBtn');
 
   // Init date
   $('#date').value = todayLocalISO();
@@ -404,6 +446,52 @@
     })
   }
 
+  // ---------- NEW: Other actions logic ----------
+  function fillSpoonsSelect(sel){
+    if(!sel) return;
+    sel.innerHTML = Array.from({length:6},(_,i)=>`<option value="${i}" ${i===1?'selected':''}>${i}</option>`).join('');
+  }
+  fillSpoonsSelect(foodSpoons);
+
+  function adjustSpoons(delta){
+    const cur = Number(foodSpoons?.value ?? 1);
+    let next = cur + delta;
+    next = Math.max(0, Math.min(5, next));
+    if(foodSpoons) foodSpoons.value = String(next);
+  }
+  if(foodMinus) foodMinus.addEventListener('click', (e)=>{ e.preventDefault(); adjustSpoons(-1); });
+  if(foodPlus)  foodPlus.addEventListener('click',  (e)=>{ e.preventDefault(); adjustSpoons( 1); });
+  if(foodZero)  foodZero.addEventListener('click',  (e)=>{ e.preventDefault(); if(foodSpoons) foodSpoons.value='0'; });
+
+  if(foodSendBtn){
+    foodSendBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const n = Number(foodSpoons?.value ?? 1);
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const dmy = formatDMYSlash(iso);
+      openShortcutWithText(`${dmy}\n加魚糧 ${n} 匙`);
+    });
+  }
+
+  if(surfaceFilmBtn){
+    surfaceFilmBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const dmy = formatDMYSlash(iso);
+      openShortcutWithText(`${dmy}\n水面有油膜`);
+    });
+  }
+
+  if(filterFlossBtn){
+    filterFlossBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const dmy = formatDMYSlash(iso);
+      // 你也可以改成「換綿」
+      openShortcutWithText(`${dmy}\n更換過濾棉`);
+    });
+  }
+
   // ---------- Export / Import (CSV) ----------
   function toCSV(rows){
     const header = ['date','no3','po4','kh','ca','mg','no3Disp','po4Disp','khDisp'];
@@ -470,7 +558,10 @@
     const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
 
     // Elements exist (log removed intentionally)
-    const ids = ['entryForm','date','no3','po4','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn'];
+    const ids = ['entryForm','date','no3','po4','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn',
+      // NEW
+      'foodSpoons','foodMinus','foodPlus','foodZero','foodSendBtn','surfaceFilmBtn','filterFlossBtn'
+    ];
     ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
 
     // IDs are globally unique
@@ -494,6 +585,16 @@
     // Dose sample payloads
     const sample = `${'23/9/2025'}\n${formatDropletLine('KH',2)}`;
     assert('Dose payload example', sample === '23/9/2025\nKH droplet at 2ml per day', sample);
+
+    // NEW payload samples
+    const foodExample = '23/9/2025\n加魚糧 1 匙';
+    assert('Food payload example', foodExample.includes('加魚糧') && foodExample.endsWith('1 匙'));
+
+    const filmExample = '23/9/2025\n水面有油膜';
+    assert('Oil film payload example', filmExample.endsWith('水面有油膜'));
+
+    const flossExample = '23/9/2025\n更換過濾棉';
+    assert('Filter floss payload example', flossExample.endsWith('更換過濾棉'));
 
     if(testsDiv){
       testsDiv.innerHTML = '<ul>'+results.map(r=>`<li class="${r.ok?'dev-pass':'dev-fail'}">${r.ok?'✓':'✗'} ${r.name}${r.msg?` — ${r.msg}`:''}</li>`).join('')+'</ul>';
