@@ -22,7 +22,7 @@
     @media (max-width:640px){.grid.cols-6,.grid.cols-3{grid-template-columns:repeat(1,minmax(0,1fr))}}
     label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
     input,button,select{font:inherit}
-    input[type="date"], select, input[type="number"]{width:100%;padding:12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
+    input[type="date"], select, input[type="number"], input[readonly]{width:100%;padding:12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
     select:focus,input:focus{border-color:var(--accent)}
     .row{display:flex;gap:12px;flex-wrap:wrap}
     .btn{border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
@@ -63,7 +63,7 @@
       </div>
     </header>
 
-    <!-- Entry form (kept) -->
+    <!-- Entry form (updated KH handling) -->
     <section class="panel" style="margin-top:16px">
       <form id="entryForm" class="grid cols-6" autocomplete="off">
         <div>
@@ -95,16 +95,17 @@
             <option value="3">3</option>
           </select>
         </div>
+        <!-- NEW: KH Reading (mL) scroll list 0.60–0.80 step 0.01 -->
         <div>
-          <label for="kh">KH (dKH)</label>
-          <select id="kh" name="kh">
-            <option value="">—</option>
-            <option value="7">7</option>
-            <option value="8">8</option>
-            <option value="9">9</option>
-            <option value="10">10</option>
-            <option value="11">11</option>
-          </select>
+          <label for="khReading">KH Reading (mL)</label>
+          <select id="khReading" name="khReading"></select>
+          <div class="hint">Salifert reading 0.60–0.80 (step 0.01). Default 0.70.</div>
+        </div>
+        <!-- Replaced KH input with readonly computed dKH -->
+        <div>
+          <label for="khDkh">KH (dKH, auto)</label>
+          <input id="khDkh" name="khDkh" type="number" step="0.1" readonly placeholder="auto" />
+          <div class="hint">Computed from reading. Saved to log.</div>
         </div>
         <div>
           <label for="ca">Ca (ppm)</label>
@@ -121,6 +122,8 @@
         </div>
       </form>
       <div id="warnBox" style="margin-top:8px"></div>
+      <!-- Small live preview of KH×2 -->
+      <div class="hint" id="khPreview" style="margin-top:6px">KH×2 (2 mL sample): —</div>
     </section>
 
     <!-- Maintenance -->
@@ -299,6 +302,11 @@
   const surfaceFilmBtn = $('#surfaceFilmBtn');
   const filterFlossBtn = $('#filterFlossBtn');
 
+  // NEW: KH reading & computed fields
+  const khReadingSel = $('#khReading');
+  const khDkhInput = $('#khDkh');
+  const khPreview = $('#khPreview');
+
   // Init date
   $('#date').value = todayLocalISO();
 
@@ -308,9 +316,20 @@
     const url = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(text)}`;
     window.location.href = url;
   }
-  function formatEntryForNotes({date,no3,po4,kh,ca,mg}){
+  function formatEntryForNotes({date,no3,po4,kh,ca,mg,khx2}){
     const v = x => (x===undefined || x===null || x==='') ? '-' : x;
-    return `Reef Log — ${date}\nNO3: ${v(no3)}\nPO4: ${v(po4)}\nKH: ${v(kh)}\nCa: ${v(ca)}\nMg: ${v(mg)}`;
+    const lines = [
+      `Reef Log — ${date}`,
+      `NO3: ${v(no3)}`,
+      `PO4: ${v(po4)}`,
+      `KH: ${v(kh)}`,
+      `Ca: ${v(ca)}`,
+      `Mg: ${v(mg)}`
+    ];
+    if (khx2 !== undefined && khx2 !== null && khx2 !== ''){
+      lines.push(`KH×2 (2 mL): ${khx2}`);
+    }
+    return lines.join('\n');
   }
   function formatDMYSlash(iso){
     if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)){
@@ -324,24 +343,91 @@
     return `${label} droplet at ${amount}ml per day`;
   }
 
+  // ---------- KH reading → dKH (with interpolation) ----------
+  // Anchor table from Salifert card for 0.60–0.80 mL
+  const KH_ANCHORS = [
+    {r:0.60, dkh:6.1},
+    {r:0.62, dkh:5.7},
+    {r:0.64, dkh:5.4},
+    {r:0.66, dkh:5.1},
+    {r:0.68, dkh:4.8},
+    {r:0.70, dkh:4.5},
+    {r:0.72, dkh:4.1},
+    {r:0.74, dkh:3.8},
+    {r:0.76, dkh:3.5},
+    {r:0.78, dkh:3.2},
+    {r:0.80, dkh:2.8}
+  ];
+  function computeDkhFromReading(reading){
+    reading = Number(reading);
+    if(!Number.isFinite(reading)) return null;
+    // Exact match first
+    for(const p of KH_ANCHORS){ if(Math.abs(p.r - reading) < 1e-9) return p.dkh; }
+    // Clamp to range
+    if(reading <= KH_ANCHORS[0].r) return KH_ANCHORS[0].dkh;
+    if(reading >= KH_ANCHORS[KH_ANCHORS.length-1].r) return KH_ANCHORS[KH_ANCHORS.length-1].dkh;
+    // Find neighbors and interpolate linearly
+    for(let i=0;i<KH_ANCHORS.length-1;i++){
+      const a = KH_ANCHORS[i], b = KH_ANCHORS[i+1];
+      if(reading > a.r && reading < b.r){
+        const t = (reading - a.r) / (b.r - a.r);
+        return +(a.dkh + t*(b.dkh - a.dkh)).toFixed(2);
+      }
+    }
+    return null;
+  }
+  function computeKhx2(dkh){
+    if(!Number.isFinite(dkh)) return null;
+    return +(dkh*2).toFixed(2);
+  }
+  function fillKhReadingOptions(){
+    if(!khReadingSel) return;
+    const opts = [];
+    for(let v=0.60; v<=0.80001; v+=0.01){
+      const vFixed = v.toFixed(2);
+      opts.push(`<option value="${vFixed}">${vFixed}</option>`);
+    }
+    khReadingSel.innerHTML = opts.join('');
+    khReadingSel.value = '0.70'; // default
+    // Seed computed values
+    updateKhComputed();
+  }
+  function updateKhComputed(){
+    const reading = Number(khReadingSel?.value ?? '');
+    const dkh = computeDkhFromReading(reading);
+    const khx2 = computeKhx2(dkh);
+    if(khDkhInput) khDkhInput.value = Number.isFinite(dkh) ? dkh.toFixed(1) : '';
+    if(khPreview) khPreview.textContent = `KH×2 (2 mL sample): ${Number.isFinite(khx2)? khx2.toFixed(1) : '—'}`;
+  }
+
+  if(khReadingSel){
+    fillKhReadingOptions();
+    khReadingSel.addEventListener('change', updateKhComputed);
+  }
+
   // ---------- Submit (Save) ----------
   form.addEventListener('submit', (ev)=>{
     ev.preventDefault();
     const data = Object.fromEntries(new FormData(form).entries());
+    const dkhComputed = toNumber($('#khDkh')?.value);
+    const khx2Computed = computeKhx2(dkhComputed);
+
     const displayEntry = {
       date: data.date || todayLocalISO(),
       no3: data.no3 || '',
       po4: data.po4 || '',
-      kh: data.kh || '',
+      kh: (Number.isFinite(dkhComputed)? dkhComputed.toFixed(1) : ''),
       ca: data.ca || '',
-      mg: data.mg || ''
+      mg: data.mg || '',
+      khx2: (Number.isFinite(khx2Computed)? khx2Computed.toFixed(1) : '')
     };
+
     const entry = {
       id: editingId || uid(),
       date: displayEntry.date,
       no3: toNumber((data.no3||'').replace('>','')),
       po4: toNumber(data.po4),
-      kh: toNumber(data.kh),
+      kh: toNumber(displayEntry.kh), // Save computed dKH
       ca: toNumber(data.ca),
       mg: toNumber(data.mg),
       no3Disp: displayEntry.no3 || null,
@@ -361,6 +447,7 @@
 
     form.reset();
     $('#date').value = todayLocalISO();
+    fillKhReadingOptions(); // reset to default 0.70 and recompute
     editingId = null;
     $('#saveBtn').textContent = 'Save';
   });
@@ -373,6 +460,7 @@
     resetBtn.addEventListener('click', ()=>{
       form.reset();
       $('#date').value = todayLocalISO();
+      fillKhReadingOptions();
       editingId = null;
       $('#saveBtn').textContent = 'Save';
     });
@@ -557,10 +645,9 @@
     const results = [];
     const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
 
-    // Elements exist (log removed intentionally)
-    const ids = ['entryForm','date','no3','po4','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn',
-      // NEW
-      'foodSpoons','foodMinus','foodPlus','foodZero','foodSendBtn','surfaceFilmBtn','filterFlossBtn'
+    // Elements exist (including new KH widgets)
+    const ids = ['entryForm','date','no3','po4','khReading','khDkh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn',
+      'foodSpoons','foodMinus','foodPlus','foodZero','foodSendBtn','surfaceFilmBtn','filterFlossBtn','khPreview'
     ];
     ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
 
@@ -582,19 +669,13 @@
     const dmy = formatDMYSlash('2025-09-23');
     assert('formatDMYSlash => 23/9/2025', dmy === '23/9/2025', dmy);
 
-    // Dose sample payloads
-    const sample = `${'23/9/2025'}\n${formatDropletLine('KH',2)}`;
-    assert('Dose payload example', sample === '23/9/2025\nKH droplet at 2ml per day', sample);
+    // Interpolation test at 0.61 → 5.90 dKH (linear between 0.60:6.1 and 0.62:5.7)
+    const dkh061 = computeDkhFromReading(0.61);
+    assert('0.61 mL → ~5.90 dKH', Math.abs(dkh061 - 5.90) < 1e-6, dkh061);
 
-    // NEW payload samples
-    const foodExample = '23/9/2025\n加魚糧 1 匙';
-    assert('Food payload example', foodExample.includes('加魚糧') && foodExample.endsWith('1 匙'));
-
-    const filmExample = '23/9/2025\n水面有油膜';
-    assert('Oil film payload example', filmExample.endsWith('水面有油膜'));
-
-    const flossExample = '23/9/2025\n更換過濾棉';
-    assert('Filter floss payload example', flossExample.endsWith('更換過濾棉'));
+    // KH×2 preview
+    const khx2 = computeKhx2(4.8);
+    assert('KH×2 from 4.8 = 9.6', Math.abs(khx2 - 9.6) < 1e-9, khx2);
 
     if(testsDiv){
       testsDiv.innerHTML = '<ul>'+results.map(r=>`<li class="${r.ok?'dev-pass':'dev-fail'}">${r.ok?'✓':'✗'} ${r.name}${r.msg?` — ${r.msg}`:''}</li>`).join('')+'</ul>';
