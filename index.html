@@ -244,6 +244,21 @@
           </div>
           <div class="hint">（你之前常用「換綿」也可以，見腳本）</div>
         </div>
+        <!-- NEW: Protein Skimmer foam level -->
+        <div class="card">
+          <h3>Protein Skimmer (Dry ↔ Moist)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="skimmerMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="skimmerZero" aria-label="Reset to 5">5</button>
+              <button type="button" class="icon-btn" id="skimmerPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="skimmerLevel" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="skimmerSendBtn">Send → Notes</button>
+          </div>
+          <div class="hint">1 = Very Dry, 10 = Very Moist. Saves: <code>D/M/YYYY</code> + <code>Protein skimmer foam: level N/10 (Dry→Moist)</code></div>
+        </div>
       </div>
     </section>
 
@@ -314,6 +329,13 @@
   const foodSendBtn = $('#foodSendBtn');
   const surfaceFilmBtn = $('#surfaceFilmBtn');
   const filterFlossBtn = $('#filterFlossBtn');
+
+  // NEW: skimmer controls
+  const skimmerLevel = $('#skimmerLevel');
+  const skimmerMinus = $('#skimmerMinus');
+  const skimmerPlus = $('#skimmerPlus');
+  const skimmerZero = $('#skimmerZero');
+  const skimmerSendBtn = $('#skimmerSendBtn');
 
   // Init date
   $('#date').value = todayLocalISO();
@@ -580,6 +602,39 @@
     });
   }
 
+  // ---------- NEW: Skimmer logic ----------
+  function fillSkimmerSelect(sel){
+    if(!sel) return;
+    sel.innerHTML = Array.from({length:10},(_,i)=>{
+      const n = i+1; // 1..10
+      const selected = n===5 ? ' selected' : '';
+      return `<option value="${n}"${selected}>${n}</option>`;
+    }).join('');
+  }
+  fillSkimmerSelect(skimmerLevel);
+
+  function adjustSkimmer(delta){
+    if(!skimmerLevel) return;
+    let cur = Number(skimmerLevel.value || 5);
+    cur = Math.max(1, Math.min(10, cur + delta));
+    skimmerLevel.value = String(cur);
+  }
+  if(skimmerMinus) skimmerMinus.addEventListener('click', (e)=>{ e.preventDefault(); adjustSkimmer(-1); });
+  if(skimmerPlus)  skimmerPlus.addEventListener('click', (e)=>{ e.preventDefault(); adjustSkimmer( 1); });
+  if(skimmerZero)  skimmerZero.addEventListener('click', (e)=>{ e.preventDefault(); if(skimmerLevel) skimmerLevel.value='5'; });
+
+  if(skimmerSendBtn){
+    skimmerSendBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const n = Number(skimmerLevel?.value ?? 5);
+      const iso = (document.getElementById('date')?.value) || todayLocalISO();
+      const dmy = formatDMYSlash(iso);
+      // Friendly descriptor for context
+      const desc = n<=3 ? 'very dry' : (n>=8 ? 'very moist' : (n<=5 ? 'slightly dry' : 'slightly moist'));
+      openShortcutWithText(`${dmy}\nProtein skimmer foam: level ${n}/10 (${desc})`);
+    });
+  }
+
   // ---------- Export / Import (CSV) ----------
   function toCSV(rows){
     const header = ['date','no3','po4','kh','ca','mg','no3Disp','po4Disp','khDisp','khReading','kh2x'];
@@ -649,7 +704,7 @@
     const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
 
     // Elements exist
-    const ids = ['entryForm','date','no3','po4','khReading','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn','foodSpoons','foodMinus','foodPlus','foodZero','foodSendBtn','surfaceFilmBtn','filterFlossBtn','khComputed','khComputed2x'];
+    const ids = ['entryForm','date','no3','po4','khReading','kh','ca','mg','resetBtn','saveBtn','saveAndNotesBtn','exportBtn','importInput','clearAllBtn','changeWaterBtn','khDose','caDose','mgDose','khDoseBtn','caDoseBtn','mgDoseBtn','khMinus','khPlus','khZero','caMinus','caPlus','caZero','mgMinus','mgPlus','mgZero','sendAllDosesBtn','foodSpoons','foodMinus','foodPlus','foodZero','foodSendBtn','surfaceFilmBtn','filterFlossBtn','khComputed','khComputed2x','skimmerLevel','skimmerMinus','skimmerPlus','skimmerZero','skimmerSendBtn'];
     ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
 
     // IDs are globally unique
