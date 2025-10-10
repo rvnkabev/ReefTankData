@@ -63,7 +63,7 @@
       </div>
     </header>
 
-    <!-- Entry form (KH reading added) -->
+    <!-- Entry form (KH reading optional) -->
     <section class="panel" style="margin-top:16px">
       <form id="entryForm" class="grid cols-6" autocomplete="off">
         <div>
@@ -96,9 +96,9 @@
           </select>
         </div>
         <div>
-          <label for="khReading">KH Reading (mL, 2 mL sample)</label>
+          <label for="khReading">KH Reading (mL, 2 mL sample) — optional</label>
           <select id="khReading" name="khReading"></select>
-          <div class="hint">Scroll 0.60–0.80 by 0.01; default 0.70. Auto‑calculates dKH & ×2.</div>
+          <div class="hint">Choose 0.60–0.80 (0.01 steps). Leave blank if not tested today.</div>
         </div>
         <div>
           <label for="kh">KH (dKH)</label>
@@ -110,7 +110,7 @@
             <option value="10">10</option>
             <option value="11">11</option>
           </select>
-          <div class="hint">Auto‑filled from reading (rounded), but you can override.</div>
+          <div class="hint">Auto‑filled from reading (rounded) if provided; you can override or leave blank.</div>
         </div>
         <div>
           <label>Computed (from reading)</label>
@@ -317,20 +317,20 @@
   const caMinus = $('#caMinus'); const caPlus = $('#caPlus'); const caZero = $('#caZero');
   const mgMinus = $('#mgMinus'); const mgPlus = $('#mgPlus'); const mgZero = $('#mgZero');
 
-  // NEW: KH reading DOM
+  // KH reading DOM
   const khReading = $('#khReading');
   const khSelect = $('#kh');
   const khComputed = $('#khComputed');
   const khComputed2x = $('#khComputed2x');
 
-  // NEW: other actions
+  // Other actions
   const foodSpoons = $('#foodSpoons');
   const foodMinus = $('#foodMinus'); const foodPlus = $('#foodPlus'); const foodZero = $('#foodZero');
   const foodSendBtn = $('#foodSendBtn');
   const surfaceFilmBtn = $('#surfaceFilmBtn');
   const filterFlossBtn = $('#filterFlossBtn');
 
-  // NEW: skimmer controls
+  // Skimmer controls
   const skimmerLevel = $('#skimmerLevel');
   const skimmerMinus = $('#skimmerMinus');
   const skimmerPlus = $('#skimmerPlus');
@@ -348,8 +348,8 @@
   }
   function formatEntryForNotes({date,no3,po4,kh,ca,mg}, kh2x){
     const v = x => (x===undefined || x===null || x==='') ? '-' : x;
-    // Per request, save KH × 2 value to Notes if available
-    const khNote = (kh2x !== undefined && kh2x !== null) ? kh2x : kh;
+    // If KH provided, prefer KH ×2 in notes; else show '-'
+    const khNote = (kh2x !== undefined && kh2x !== null && kh2x !== '' ) ? kh2x : kh;
     return `Reef Log — ${date}\nNO3: ${v(no3)}\nPO4: ${v(po4)}\nKH: ${v(khNote)}\nCa: ${v(ca)}\nMg: ${v(mg)}`;
   }
   function formatDMYSlash(iso){
@@ -386,20 +386,29 @@
     }
     return KH_TABLE[KH_TABLE.length-1][1];
   }
+
   function fillKhReadingSelect(){
     if(!khReading) return;
-    const opts = [];
+    const opts = ["<option value=\"\" selected>—</option>"];
     for(let v=0.60; v<=0.800001; v+=0.01){
       const val = v.toFixed(2);
-      const sel = (val === '0.70') ? ' selected' : '';
-      opts.push(`<option value="${val}"${sel}>${val}</option>`);
+      opts.push(`<option value="${val}">${val}</option>`);
     }
     khReading.innerHTML = opts.join('');
     updateKhComputed();
   }
+
   function round1(x){ return Math.round(x*10)/10; }
   function updateKhComputed(){
-    const r = Number(khReading?.value ?? '0.70');
+    const val = khReading?.value ?? '';
+    if(!val){
+      if(khComputed) khComputed.textContent = '—';
+      if(khComputed2x) khComputed2x.textContent = '—';
+      if(khSelect) khSelect.value = ''; // keep manual KH blank by default
+      if(khReading){ khReading.dataset.dkh=''; khReading.dataset.dkh2x=''; }
+      return;
+    }
+    const r = Number(val);
     const dkh = khFromReading(r);
     const dkh1 = dkh !== null ? round1(dkh) : null;
     const dkh2 = dkh !== null ? round1(dkh*2) : null;
@@ -407,7 +416,6 @@
     if(khComputed2x) khComputed2x.textContent = (dkh2 ?? '—');
     // Auto-fill the KH (dKH) select to nearest integer if available
     if(khSelect && dkh1 !== null){
-      // choose closest among 7..11
       const choices = [7,8,9,10,11];
       let best = choices[0];
       let err = Math.abs(dkh1 - best);
@@ -418,8 +426,10 @@
       khSelect.value = String(best);
     }
     // Store latest for submit
-    khReading.dataset.dkh = dkh1 ?? '';
-    khReading.dataset.dkh2x = dkh2 ?? '';
+    if(khReading){
+      khReading.dataset.dkh = dkh1 ?? '';
+      khReading.dataset.dkh2x = dkh2 ?? '';
+    }
   }
 
   // ---------- Submit (Save) ----------
@@ -435,8 +445,8 @@
       date: data.date || todayLocalISO(),
       no3: data.no3 || '',
       po4: data.po4 || '',
-      // Show KH as the rounded computed dKH if available, else the manual select
-      kh: (dkhComputed ?? (data.kh || '')),
+      // Show KH as the rounded computed dKH if available, else the manual select, else '-'
+      kh: (dkhComputed !== null ? dkhComputed : (data.kh || '')),
       ca: data.ca || '',
       mg: data.mg || ''
     };
@@ -446,13 +456,13 @@
       date: displayEntry.date,
       no3: toNumber((data.no3||'').replace('>','')),
       po4: toNumber(data.po4),
-      kh: toNumber(dkhComputed ?? data.kh), // store actual dKH
+      kh: toNumber(dkhComputed !== null ? dkhComputed : data.kh), // null if not provided ⇒ stored as null
       ca: toNumber(data.ca),
       mg: toNumber(data.mg),
       kh2x: toNumber(dkh2xComputed),
       no3Disp: displayEntry.no3 || null,
       po4Disp: displayEntry.po4 || null,
-      khDisp: (dkhComputed !== null && dkhComputed !== undefined && !Number.isNaN(dkhComputed)) ? String(dkhComputed) : (displayEntry.kh || null),
+      khDisp: (dkhComputed !== null ? String(dkhComputed) : (data.kh || null)),
       khReading: data.khReading || null,
       createdAt: editingId ? (entries.find(x=>x.id===editingId)?.createdAt || Date.now()) : Date.now(),
       updatedAt: Date.now()
@@ -469,7 +479,7 @@
 
     form.reset();
     $('#date').value = todayLocalISO();
-    fillKhReadingSelect(); // reset default 0.70 and recompute
+    fillKhReadingSelect(); // defaults to blank (—)
     editingId = null;
     $('#saveBtn').textContent = 'Save';
   });
@@ -556,7 +566,7 @@
     })
   }
 
-  // ---------- NEW: Other actions logic ----------
+  // ---------- Other actions logic ----------
   function fillSpoonsSelect(sel){
     if(!sel) return;
     sel.innerHTML = Array.from({length:6},(_,i)=>`<option value="${i}" ${i===1?'selected':''}>${i}</option>`).join('');
@@ -602,7 +612,7 @@
     });
   }
 
-  // ---------- NEW: Skimmer logic ----------
+  // ---------- Skimmer logic ----------
   function fillSkimmerSelect(sel){
     if(!sel) return;
     sel.innerHTML = Array.from({length:10},(_,i)=>{
@@ -629,7 +639,6 @@
       const n = Number(skimmerLevel?.value ?? 5);
       const iso = (document.getElementById('date')?.value) || todayLocalISO();
       const dmy = formatDMYSlash(iso);
-      // Friendly descriptor for context
       const desc = n<=3 ? 'very dry' : (n>=8 ? 'very moist' : (n<=5 ? 'slightly dry' : 'slightly moist'));
       openShortcutWithText(`${dmy}\nProtein skimmer foam: level ${n}/10 (${desc})`);
     });
@@ -732,7 +741,7 @@
     return results.every(r=>r.ok);
   }
 
-  // Init KH reading UI & listeners
+  // Init KH reading UI & listeners (defaults blank so KH can be '-')
   fillKhReadingSelect();
   khReading?.addEventListener('change', updateKhComputed);
 
