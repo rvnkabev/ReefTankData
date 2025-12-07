@@ -1,73 +1,566 @@
-<option value="10">10</option>
-<option value="11">11</option>
-</select>
-          <div class="hint">Auto‑filled from reading (rounded) if provided; you can override or leave blank.</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reef Chemistry Logger — v2</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121a33; --muted:#9fb2ff; --ink:#e9eefc; --accent:#7aa2ff; --accent2:#25d0a6; --warn:#ffb02e; --danger:#ff5a78; --ok:#21d19f;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#0b1020 0%,#0e1430 100%);color:var(--ink)}
+    .wrap{max-width:980px;margin:0 auto;padding:24px}
+    h1{margin:0 0 12px;font-size:clamp(22px,3.5vw,34px)}
+    h2{margin:0 0 10px;font-size:clamp(18px,2.8vw,24px)}
+    .muted{color:var(--muted)}
+    .panel{background:var(--panel);border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.35)}
+    .grid{display:grid;gap:12px}
+    .grid.cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    @media (max-width:900px){.grid.cols-6{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.cols-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){.grid.cols-6,.grid.cols-3{grid-template-columns:repeat(1,minmax(0,1fr))}}
+    label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+    input,button,select{font:inherit}
+    input[type="date"], select, input[type="number"], input[type="text"]{width:100%;padding:12px;border-radius:12px;border:1px solid #1f2a4d;background:#0f1733;color:var(--ink);outline:none}
+    select:focus,input:focus{border-color:var(--accent)}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#081126}
+    .btn.ghost{background:transparent;border:1px solid #223061;color:var(--ink)}
+    .btn.warn{background:var(--warn);color:#2b1600}
+    .btn.danger{background:var(--danger);color:#fff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .hint{font-size:11px;color:#bcd0ff;opacity:.85}
+    footer{margin-top:18px;color:#94a8ff;font-size:12px;opacity:.8}
+    .right{margin-left:auto}
+    details.dev summary{cursor:pointer}
+    .dev-pass{color:#21d19f}
+    .dev-fail{color:#ff5a78}
+
+    /* Cards */
+    .card{background:#0f1733;border:1px solid #223061;border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+    .card h3{margin:0;font-size:14px;color:#d7e3ff}
+    .dose-row{display:flex;gap:8px;align-items:center}
+    .dose-ctl{display:flex;gap:6px}
+    .icon-btn{width:38px;height:38px;border-radius:10px;border:1px solid #223061;background:transparent;color:var(--ink);font-size:18px;line-height:1}
+    .spacer{flex:1}
+
+    /* Nav */
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{border:1px solid #223061;background:#0f1733;color:var(--ink);padding:8px 12px;border-radius:12px;cursor:pointer}
+    .tab[aria-current="page"]{background:var(--accent);color:#081126;border-color:transparent}
+    section[hidden]{display:none !important}
+
+    /* Home */
+    .home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width:640px){.home-grid{grid-template-columns:1fr}}
+    .nav-card{cursor:pointer;transition:transform .12s ease}
+    .nav-card:hover{transform:translateY(-2px)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="row" style="align-items:center">
+      <div>
+        <h1>Reef Chemistry Logger — v2</h1>
+        <div class="muted">Front pages: NP Data • Maintenance • Protein Data • Droplet Machine</div>
+      </div>
+      <div class="right toolbar">
+        <button class="btn ghost" id="exportBtn" title="Export CSV">Export CSV</button>
+        <label for="importInput" class="btn ghost" style="cursor:pointer" title="Import CSV">Import CSV</label>
+        <input id="importInput" type="file" accept=".csv" style="display:none" />
+        <button class="btn ghost" id="clearAllBtn" title="Clear saved entries in this browser">Clear All</button>
+      </div>
+    </header>
+
+    <!-- TOP NAV -->
+    <nav class="panel" style="margin-top:12px">
+      <div class="tabs">
+        <button class="tab" data-page="home" aria-current="page">Home</button>
+        <button class="tab" data-page="np">NP Data</button>
+        <button class="tab" data-page="maint">Maintenance</button>
+        <button class="tab" data-page="protein">Protein Data</button>
+        <button class="tab" data-page="droplet">Droplet Machine</button>
+      </div>
+    </nav>
+
+    <!-- HOME -->
+    <section id="page-home" class="panel" style="margin-top:12px">
+      <h2>Front Page</h2>
+      <div class="home-grid">
+        <div class="card nav-card" data-goto="np">
+          <h3>NP Data</h3>
+          <div class="muted">NO₃, PO₄, KH, Ca, Mg logging & Notes</div>
+        </div>
+        <div class="card nav-card" data-goto="maint">
+          <h3>Maintenance</h3>
+          <div class="muted">加魚糧、油膜、更換過濾棉、Change Water</div>
+        </div>
+        <div class="card nav-card" data-goto="protein">
+          <h3>Protein Data</h3>
+          <div class="muted">Protein skimmer (Dry↔Moist) + Waste water output</div>
+        </div>
+        <div class="card nav-card" data-goto="droplet">
+          <h3>Droplet Machine</h3>
+          <div class="muted">KH / Ca / Mg dosing (per day) + Generic droplet</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NP DATA (form) -->
+    <section id="page-np" class="panel" style="margin-top:12px" hidden>
+      <h2>NP Data</h2>
+      <form id="entryForm" class="grid cols-6" autocomplete="off">
+        <div>
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" required />
+          <div class="hint">Default = today (local time)</div>
+        </div>
+        <div>
+          <label for="no3">NO₃ (ppm)</label>
+          <select id="no3" name="no3">
+            <option value="">—</option>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2.5">2.5</option>
+            <option value="10">10</option>
+            <option value=">10">&gt;10</option>
+          </select>
+        </div>
+        <div>
+          <label for="po4">PO₄ (ppm)</label>
+          <select id="po4" name="po4">
+            <option value="">—</option>
+            <option value="0">0</option>
+            <option value="0.03">0.03</option>
+            <option value="0.1">0.1</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="1">1</option>
+            <option value="3">3</option>
+          </select>
+        </div>
+        <div>
+          <label for="khReading">KH Reading (mL, 2 mL sample) — optional</label>
+          <select id="khReading" name="khReading"></select>
+          <div class="hint">Choose 0.60–0.80 (0.01 steps). Leave blank if not tested today.</div>
+        </div>
+        <div>
+          <label for="kh">KH (dKH)</label>
+          <select id="kh" name="kh">
+            <option value="">—</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+          </select>
           <div class="hint">Auto-filled from reading (rounded) if provided; you can override or leave blank.</div>
-</div>
-<div>
-<label>Computed (from reading)</label>
-@@ -186,7 +186,7 @@ <h2>NP Data</h2>
-<h2>Maintenance</h2>
-<div class="row" style="align-items:center; justify-content:space-between; margin-bottom:6px">
-<strong>Quick actions</strong>
-        <div class="hint">All actions send a two‑line record to your Shortcut <code>SaveToReefTankData</code>.</div>
+        </div>
+        <div>
+          <label>Computed (from reading)</label>
+          <div class="hint"><span id="khComputed">—</span> dKH • <span id="khComputed2x">—</span> ×2</div>
+        </div>
+        <div>
+          <label for="ca">Ca (ppm)</label>
+          <input type="number" id="ca" name="ca" inputmode="numeric" step="1" min="0" placeholder="e.g. 430" />
+        </div>
+        <div>
+          <label for="mg">Mg (ppm)</label>
+          <input type="number" id="mg" name="mg" inputmode="numeric" step="1" min="0" placeholder="e.g. 1350" />
+        </div>
+        <div class="row" style="grid-column:1/-1;justify-content:flex-end;margin-top:6px">
+          <button type="button" class="btn ghost" id="resetBtn">Reset</button>
+          <button type="submit" class="btn primary" id="saveBtn">Save</button>
+          <button type="button" class="btn warn" id="saveAndNotesBtn" title="Save and send to iPhone Notes via Shortcut">Save → Notes</button>
+        </div>
+      </form>
+      <div id="warnBox" style="margin-top:8px"></div>
+    </section>
+
+    <!-- MAINTENANCE PAGE -->
+    <section id="page-maint" class="panel" style="margin-top:12px" hidden>
+      <h2>Maintenance</h2>
+      <div class="row" style="align-items:center; justify-content:space-between; margin-bottom:6px">
+        <strong>Quick actions</strong>
         <div class="hint">All actions send a two-line record to your Shortcut <code>SaveToReefTankData</code>.</div>
-</div>
+      </div>
 
-<div class="grid cols-3" style="margin-bottom:12px">
-@@ -206,19 +206,20 @@ <h3>今天日期</h3>
-</div>
+      <div class="grid cols-3" style="margin-bottom:12px">
+        <div class="card">
+          <h3>Change Water</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>#changewater</code></div>
+            <div class="spacer"></div>
+            <button type="button" class="btn primary" id="changeWaterBtn">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>今天日期</h3>
+          <div class="hint">Uses the date field in NP Data; change it there if needed.</div>
+        </div>
+      </div>
 
-<div class="grid cols-3">
+      <div class="grid cols-3">
         <!-- ★ 改成 g 單位 -->
-<div class="card">
-          <h3>加魚糧（匙）</h3>
+        <div class="card">
           <h3>加魚糧（g）</h3>
-<div class="dose-row">
-<div class="dose-ctl">
-<button type="button" class="icon-btn" id="foodMinus" aria-label="Decrease">−</button>
-              <button type="button" class="icon-btn" id="foodZero" aria-label="Reset to 0">0</button>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="foodMinus" aria-label="Decrease">−</button>
               <button type="button" class="icon-btn" id="foodZero" aria-label="Reset to 1 g">1</button>
-<button type="button" class="icon-btn" id="foodPlus" aria-label="Increase">+</button>
-</div>
-<select id="foodSpoons" style="max-width:120px"></select>
-<div class="spacer"></div>
-<button type="button" class="btn ghost" id="foodSendBtn">Send → Notes</button>
-</div>
-          <div class="hint">格式：<code>D/M/YYYY</code> + <code>加魚糧 X 匙</code></div>
+              <button type="button" class="icon-btn" id="foodPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="foodSpoons" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="foodSendBtn">Send → Notes</button>
+          </div>
           <div class="hint">格式：<code>D/M/YYYY</code> + <code>加魚糧 X g</code></div>
-</div>
-<div class="card">
-<h3>油膜</h3>
-@@ -272,7 +273,7 @@ <h3>Skimmer Waste Water Output</h3>
-<div class="spacer"></div>
-<button type="button" class="btn ghost" id="wasteSendBtn">Send → Notes</button>
-</div>
-          <div class="hint">Choice list: 10% … 100%. Buttons fine‑tune (±10%). Reset sets to 0%. Persists as latest value and defaults on next visit. Logged as out of 1500ml.</div>
+        </div>
+        <div class="card">
+          <h3>油膜</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>水面有油膜</code></div>
+            <div class="spacer"></div>
+            <button type="button" class="btn primary" id="surfaceFilmBtn">Send</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>更換過濾棉</h3>
+          <div class="dose-row">
+            <div class="hint">Sends:</div>
+            <div class="hint">D/M/YYYY + <code>更換過濾棉</code></div>
+            <div class="spacer"></div>
+            <button type="button" class="btn primary" id="filterFlossBtn">Send</button>
+          </div>
+          <div class="hint">（你之前常用「換綿」也可以，見腳本）</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROTEIN DATA PAGE -->
+    <section id="page-protein" class="panel" style="margin-top:12px" hidden>
+      <h2>Protein Data</h2>
+      <div class="grid cols-3" style="margin-bottom:12px">
+        <div class="card">
+          <h3>Protein Skimmer (Dry ↔ Moist)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="skimmerMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="skimmerZero" aria-label="Reset to 5">5</button>
+              <button type="button" class="icon-btn" id="skimmerPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="skimmerLevel" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="skimmerSendBtn">Send → Notes</button>
+          </div>
+          <div class="hint">1 = very dry, 10 = very moist. Saves: <code>D/M/YYYY</code> + <code>Protein skimmer foam: level N/10 (...)</code></div>
+        </div>
+        <div class="card">
+          <h3>Skimmer Waste Water Output</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="wasteMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="wasteReset" aria-label="Reset to 0">⟳</button>
+              <button type="button" class="icon-btn" id="wastePlus" aria-label="Increase">+</button>
+            </div>
+            <select id="wastePct" style="max-width:140px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="wasteSendBtn">Send → Notes</button>
+          </div>
           <div class="hint">Choice list: 10% … 100%. Buttons fine-tune (±10%). Reset sets to 0%. Persists as latest value and defaults on next visit. Logged as out of 1500ml.</div>
-</div>
-</div>
-</section>
-@@ -343,7 +344,7 @@ <h3>Generic Droplet</h3>
-</section>
+        </div>
+      </div>
+    </section>
 
-<details class="panel dev" style="margin-top:16px">
-      <summary>🔧 Self‑tests</summary>
+    <!-- DROPLET MACHINE PAGE -->
+    <section id="page-droplet" class="panel" style="margin-top:12px" hidden>
+      <h2>Droplet Machine</h2>
+      <div class="grid cols-3" style="margin-bottom:12px">
+        <div class="card">
+          <h3>KH Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="khMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="khZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="khPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="khDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="khDoseBtn">Send → Notes</button>
+          </div>
+          <div class="hint">Example: <code>23/9/2025</code> + <code>KH droplet at 2ml per day</code></div>
+        </div>
+
+        <div class="card">
+          <h3>Ca Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="caMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="caZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="caPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="caDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="caDoseBtn">Send → Notes</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Mg Droplet (ml/day)</h3>
+          <div class="dose-row">
+            <div class="dose-ctl">
+              <button type="button" class="icon-btn" id="mgMinus" aria-label="Decrease">−</button>
+              <button type="button" class="icon-btn" id="mgZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="mgPlus" aria-label="Increase">+</button>
+            </div>
+            <select id="mgDose" style="max-width:120px"></select>
+            <div class="spacer"></div>
+            <button type="button" class="btn ghost" id="mgDoseBtn">Send → Notes</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Generic Droplet</h3>
+        <div class="dose-row" style="gap:10px; align-items:center">
+          <input id="genLabel" type="text" placeholder="Label (e.g. Vodka, AB+)" style="max-width:220px"/>
+          <span class="hint">ml/day:</span>
+          <select id="genDose" style="max-width:120px"></select>
+          <div class="spacer"></div>
+          <button type="button" class="btn ghost" id="genDoseBtn">Send → Notes</button>
+        </div>
+        <div class="hint">Sends: <code>D/M/YYYY</code> + <code>&lt;Label&gt; droplet at Xml per day</code></div>
+      </div>
+
+      <div class="row" style="justify-content:flex-end; margin-top:12px">
+        <button type="button" class="btn ghost" id="sendAllDosesBtn">Send All (KH + Ca + Mg) → Notes</button>
+      </div>
+    </section>
+
+    <details class="panel dev" style="margin-top:16px">
       <summary>🔧 Self-tests</summary>
-<div id="tests"></div>
-<div class="hint">These run in your browser to catch common issues (missing elements, newline handling, etc.).</div>
-</details>
-@@ -560,13 +561,33 @@ <h3>Generic Droplet</h3>
+      <div id="tests"></div>
+      <div class="hint">These run in your browser to catch common issues (missing elements, newline handling, etc.).</div>
+    </details>
 
-changeWaterBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n#changewater`); });
+    <footer>
+      Data is stored in <code>localStorage</code> (this browser only). Export CSV to back up.
+    </footer>
+  </div>
 
-  function fillSpoonsSelect(sel){ if(!sel) return; sel.innerHTML = Array.from({length:6},(_,i)=>`<option value="${i}" ${i===1?'selected':''}>${i}</option>`).join(''); }
-  fillSpoonsSelect(foodSpoons);
-  function adjustSpoons(delta){ const cur = Number(foodSpoons?.value ?? 1); let next = cur + delta; next = Math.max(0, Math.min(5, next)); if(foodSpoons) foodSpoons.value = String(next); }
-  foodMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustSpoons(-1); });
-  foodPlus?.addEventListener('click',  (e)=>{ e.preventDefault(); adjustSpoons( 1); });
-  foodZero?.addEventListener('click',  (e)=>{ e.preventDefault(); if(foodSpoons) foodSpoons.value='0'; });
-  foodSendBtn?.addEventListener('click', (e)=>{ e.preventDefault(); const n = Number(foodSpoons?.value ?? 1); openShortcutWithText(`${formatDateDMY()}\n加魚糧 ${n} 匙`); });
+  <script>
+  // ---------- Utilities ----------
+  const $ = (sel, el=document) => el.querySelector(sel);
+  const $$ = (sel, el=document) => [...el.querySelectorAll(sel)];
+  const pad = n => String(n).padStart(2,'0');
+  const todayLocalISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  const uid = () => Math.random().toString(36).slice(2)+Date.now().toString(36);
+  const toNumber = v => (v===undefined||v===null||v==='') ? null : (Number.isFinite(Number(v)) ? Number(v) : null);
+
+  // ---------- Storage ----------
+  const KEY = 'reefChemEntries.v1';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY))||[] } catch { return [] } };
+  const save = (data) => localStorage.setItem(KEY, JSON.stringify(data));
+
+  // Additional persisted values
+  const KEY_WASTE = 'reef.skimmerWastePct'; // integer 0..100, step 10
+
+  // ---------- State ----------
+  let entries = load();
+  let editingId = null;
+  let pendingShortcut = false;
+
+  // ---------- DOM (shared) ----------
+  const exportBtn = $('#exportBtn');
+  const importInput = $('#importInput');
+  const clearAllBtn = $('#clearAllBtn');
+
+  // ---------- NAV ----------
+  const tabs = $$('.tab');
+  const sections = {
+    home: $('#page-home'),
+    np: $('#page-np'),
+    maint: $('#page-maint'),
+    protein: $('#page-protein'),
+    droplet: $('#page-droplet'),
+  };
+  function setPage(name){
+    Object.entries(sections).forEach(([k,sec])=>{ if(sec) sec.hidden = (k!==name); });
+    tabs.forEach(t=> t.setAttribute('aria-current', t.dataset.page===name ? 'page' : 'false'));
+    // focus first interactive element in page (nice)
+    const first = sections[name]?.querySelector('input,select,button');
+    if(first) first.focus();
+    // persist last page
+    localStorage.setItem('reef.lastPage', name);
+  }
+  tabs.forEach(t=> t.addEventListener('click', ()=> setPage(t.dataset.page)));
+  $$('.nav-card').forEach(c=> c.addEventListener('click', ()=> setPage(c.dataset.goto)));
+  setPage(localStorage.getItem('reef.lastPage') || 'home');
+
+  // ---------- iOS Shortcuts helpers ----------
+  function openShortcutWithText(text){
+    const shortcutName = 'SaveToReefTankData';
+    const url = `shortcuts://run-shortcut?name=${encodeURIComponent(shortcutName)}&input=text&text=${encodeURIComponent(text)}`;
+    window.location.href = url;
+  }
+  function formatEntryForNotes({date,no3,po4,kh,ca,mg}, kh2x){
+    const v = x => (x===undefined || x===null || x==='') ? '-' : x;
+    const khNote = (kh2x !== undefined && kh2x !== null && kh2x !== '' ) ? kh2x : kh;
+    return `Reef Log — ${date}\nNO3: ${v(no3)}\nPO4: ${v(po4)}\nKH: ${v(khNote)}\nCa: ${v(ca)}\nMg: ${v(mg)}`;
+  }
+  function formatDMYSlash(iso){
+    if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)){
+      const d = new Date();
+      return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    }
+    const [y,m,d] = iso.split('-').map(Number);
+    return `${d}/${m}/${y}`;
+  }
+  function formatDropletLine(label, amount){ return `${label} droplet at ${amount}ml per day`; }
+
+  // ---------- KH reading → dKH (linear interp) ----------
+  const KH_TABLE = [
+    [0.60, 6.1], [0.62, 5.7], [0.64, 5.4], [0.66, 5.1], [0.68, 4.8], [0.70, 4.5],
+    [0.72, 4.1], [0.74, 3.8], [0.76, 3.5], [0.78, 3.2], [0.80, 2.8]
+  ];
+  function clamp(val, lo, hi){ return Math.max(lo, Math.min(hi, val)); }
+  function khFromReading(r){
+    if(!Number.isFinite(r)) return null;
+    r = clamp(r, 0.60, 0.80);
+    for(let i=0;i<KH_TABLE.length;i++){
+      const [x,y] = KH_TABLE[i];
+      if(Math.abs(r - x) < 1e-9) return y; // exact
+      if(i < KH_TABLE.length-1){
+        const [x2,y2] = KH_TABLE[i+1];
+        if(r > x && r < x2){
+          const t = (r - x) / (x2 - x);
+          return y + t*(y2 - y);
+        }
+      }
+    }
+    return KH_TABLE[KH_TABLE.length-1][1];
+  }
+
+  // ---------- NP PAGE DOM ----------
+  const form = $('#entryForm');
+  const resetBtn = $('#resetBtn');
+  const saveAndNotesBtn = $('#saveAndNotesBtn');
+  const dateInput = $('#date');
+  const khReading = $('#khReading');
+  const khSelect = $('#kh');
+  const khComputed = $('#khComputed');
+  const khComputed2x = $('#khComputed2x');
+
+  // init date
+  if(dateInput) dateInput.value = todayLocalISO();
+
+  function fillKhReadingSelect(){
+    if(!khReading) return;
+    const opts = ["<option value=\"\" selected>—</option>"];
+    for(let v=0.60; v<=0.800001; v+=0.01){
+      const val = v.toFixed(2);
+      opts.push(`<option value="${val}">${val}</option>`);
+    }
+    khReading.innerHTML = opts.join('');
+    updateKhComputed();
+  }
+  function round1(x){ return Math.round(x*10)/10; }
+  function updateKhComputed(){
+    const val = khReading?.value ?? '';
+    if(!val){
+      if(khComputed) khComputed.textContent = '—';
+      if(khComputed2x) khComputed2x.textContent = '—';
+      if(khSelect) khSelect.value = '';
+      if(khReading){ khReading.dataset.dkh=''; khReading.dataset.dkh2x=''; }
+      return;
+    }
+    const r = Number(val);
+    const dkh = khFromReading(r);
+    const dkh1 = dkh !== null ? round1(dkh) : null;
+    const dkh2 = dkh !== null ? round1(dkh*2) : null;
+    if(khComputed) khComputed.textContent = (dkh1 ?? '—');
+    if(khComputed2x) khComputed2x.textContent = (dkh2 ?? '—');
+    if(khSelect && dkh1 !== null){
+      const choices = [7,8,9,10,11];
+      let best = choices[0];
+      let err = Math.abs(dkh1 - best);
+      for(const c of choices){ const e = Math.abs(dkh1 - c); if(e < err){ err = e; best = c; } }
+      khSelect.value = String(best);
+    }
+    if(khReading){ khReading.dataset.dkh = dkh1 ?? ''; khReading.dataset.dkh2x = dkh2 ?? ''; }
+  }
+  fillKhReadingSelect();
+  khReading?.addEventListener('change', updateKhComputed);
+
+  // ---------- Submit (Save) ----------
+  form?.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const data = Object.fromEntries(new FormData(form).entries());
+    const dkhComputed = toNumber(khReading?.dataset?.dkh || '');
+    const dkh2xComputed = toNumber(khReading?.dataset?.dkh2x || '');
+
+    const displayEntry = {
+      date: data.date || todayLocalISO(),
+      no3: data.no3 || '',
+      po4: data.po4 || '',
+      kh: (dkhComputed !== null ? dkhComputed : (data.kh || '')),
+      ca: data.ca || '',
+      mg: data.mg || ''
+    };
+
+    const entry = {
+      id: editingId || uid(),
+      date: displayEntry.date,
+      no3: toNumber((data.no3||'').replace('>','')),
+      po4: toNumber(data.po4),
+      kh: toNumber(dkhComputed !== null ? dkhComputed : data.kh),
+      ca: toNumber(data.ca),
+      mg: toNumber(data.mg),
+      kh2x: toNumber(dkh2xComputed),
+      no3Disp: displayEntry.no3 || null,
+      po4Disp: displayEntry.po4 || null,
+      khDisp: (dkhComputed !== null ? String(dkhComputed) : (data.kh || null)),
+      khReading: data.khReading || null,
+      createdAt: editingId ? (entries.find(x=>x.id===editingId)?.createdAt || Date.now()) : Date.now(),
+      updatedAt: Date.now()
+    };
+
+    if(editingId){ entries = entries.map(e=> e.id===editingId ? entry : e); } else { entries.push(entry); }
+    save(entries);
+
+    if(pendingShortcut){
+      pendingShortcut = false;
+      const text = formatEntryForNotes(displayEntry, entry.kh2x);
+      setTimeout(()=> openShortcutWithText(text), 30);
+    }
+
+    form.reset();
+    if(dateInput) dateInput.value = todayLocalISO();
+    fillKhReadingSelect();
+    editingId = null; $('#saveBtn').textContent = 'Save';
+  });
+  saveAndNotesBtn?.addEventListener('click', ()=>{ pendingShortcut = true; form.requestSubmit(); });
+  resetBtn?.addEventListener('click', ()=>{ form.reset(); if(dateInput) dateInput.value = todayLocalISO(); fillKhReadingSelect(); editingId = null; $('#saveBtn').textContent = 'Save'; });
+  clearAllBtn?.addEventListener('click', ()=>{ if(confirm('Delete ALL entries?')){ entries = []; save(entries); } });
+
+  // ---------- Maintenance actions ----------
+  const changeWaterBtn = $('#changeWaterBtn');
+  const foodSpoons = $('#foodSpoons');
+  const foodMinus = $('#foodMinus'); const foodPlus = $('#foodPlus'); const foodZero = $('#foodZero');
+  const foodSendBtn = $('#foodSendBtn');
+  const surfaceFilmBtn = $('#surfaceFilmBtn');
+  const filterFlossBtn = $('#filterFlossBtn');
+
+  function formatDateDMY(){ const iso = (dateInput?.value) || todayLocalISO(); return formatDMYSlash(iso); }
+
+  changeWaterBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n#changewater`); });
+
   // ★ 改成 1g～6g
   function fillFoodSelect(sel){
     if(!sel) return;
@@ -96,5 +589,144 @@ changeWaterBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcu
     openShortcutWithText(`${formatDateDMY()}\n加魚糧 ${n} g`);
   });
 
-surfaceFilmBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n水面有油膜`); });
-filterFlossBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n更換過濾棉`); });
+  surfaceFilmBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n水面有油膜`); });
+  filterFlossBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n更換過濾棉`); });
+
+  // ---------- Protein Data ----------
+  const skimmerLevel = $('#skimmerLevel');
+  const skimmerMinus = $('#skimmerMinus');
+  const skimmerPlus = $('#skimmerPlus');
+  const skimmerZero = $('#skimmerZero');
+  const skimmerSendBtn = $('#skimmerSendBtn');
+
+  function fillSkimmerSelect(sel){ if(!sel) return; sel.innerHTML = Array.from({length:10},(_,i)=>{ const n=i+1; const selected = n===5 ? ' selected' : ''; return `<option value="${n}"${selected}>${n}</option>`; }).join(''); }
+  fillSkimmerSelect(skimmerLevel);
+  function adjustSkimmer(delta){ if(!skimmerLevel) return; let cur = Number(skimmerLevel.value || 5); cur = Math.max(1, Math.min(10, cur + delta)); skimmerLevel.value = String(cur); }
+  skimmerMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustSkimmer(-1); });
+  skimmerPlus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustSkimmer( 1); });
+  skimmerZero?.addEventListener('click', (e)=>{ e.preventDefault(); if(skimmerLevel) skimmerLevel.value='5'; });
+  skimmerSendBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const n = Number(skimmerLevel?.value ?? 5);
+    const desc = n<=3 ? 'very dry' : (n>=8 ? 'very moist' : (n<=5 ? 'slightly dry' : 'slightly moist'));
+    openShortcutWithText(`${formatDateDMY()}\nProtein skimmer foam: level ${n}/10 (${desc})`);
+  });
+
+  // Skimmer waste output (persisted)
+  const wastePct = $('#wastePct');
+  const wasteMinus = $('#wasteMinus');
+  const wastePlus = $('#wastePlus');
+  const wasteReset = $('#wasteReset');
+  const wasteSendBtn = $('#wasteSendBtn');
+
+  function fillWasteSelect(){
+    if(!wastePct) return;
+    const latest = Number(localStorage.getItem(KEY_WASTE) ?? '0');
+    const options = [0,10,20,30,40,50,60,70,80,90,100];
+    wastePct.innerHTML = options.map(p=>`<option value="${p}" ${p===latest?'selected':''}>${p}%</option>`).join('');
+  }
+  function persistWaste(val){ localStorage.setItem(KEY_WASTE, String(val)); }
+  function adjustWaste(delta){ const cur = Number(wastePct?.value ?? 0); let next = cur + delta; next = Math.max(0, Math.min(100, next)); if(wastePct){ wastePct.value = String(next); } persistWaste(next); }
+
+  fillWasteSelect();
+  wastePct?.addEventListener('change', ()=> persistWaste(Number(wastePct.value)));
+  wasteMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustWaste(-10); });
+  wastePlus?.addEventListener('click',  (e)=>{ e.preventDefault(); adjustWaste( 10); });
+  wasteReset?.addEventListener('click', (e)=>{ e.preventDefault(); if(wastePct){ wastePct.value='0'; } persistWaste(0); });
+  wasteSendBtn?.addEventListener('click', (e)=>{ e.preventDefault(); const p = Number(wastePct?.value ?? 0); openShortcutWithText(`${formatDateDMY()}\nProtein skimmer waste water output: ${p}% (out of 1500ml)`); });
+
+  // ---------- Droplet Machine ----------
+  const khDose = $('#khDose');
+  const caDose = $('#caDose');
+  const mgDose = $('#mgDose');
+  const khDoseBtn = $('#khDoseBtn');
+  const caDoseBtn = $('#caDoseBtn');
+  const mgDoseBtn = $('#mgDoseBtn');
+  const khMinus = $('#khMinus'); const khPlus = $('#khPlus'); const khZero = $('#khZero');
+  const caMinus = $('#caMinus'); const caPlus = $('#caPlus'); const caZero = $('#caZero');
+  const mgMinus = $('#mgMinus'); const mgPlus = $('#mgPlus'); const mgZero = $('#mgZero');
+  const sendAllDosesBtn = $('#sendAllDosesBtn');
+
+  const genLabel = $('#genLabel');
+  const genDose = $('#genDose');
+  const genDoseBtn = $('#genDoseBtn');
+
+  function fillDoseSelect(sel){ if(!sel) return; sel.innerHTML = '<option value="">—</option>' + Array.from({length:31},(_,i)=>i-15).map(n=>`<option value="${n}" ${n===0?'selected':''}>${n}</option>`).join(''); }
+  [khDose, caDose, mgDose].forEach(fillDoseSelect);
+  function fillGenDose(){ if(!genDose) return; genDose.innerHTML = Array.from({length:61},(_,i)=>i-30).map(n=>`<option value="${n}" ${n===0?'selected':''}>${n}</option>`).join(''); }
+  fillGenDose();
+
+  function adjustDose(sel, delta){ if(!sel) return; const current = Number(sel.value || 0); let next = current + delta; next = Math.max(-15, Math.min(15, next)); sel.value = String(next); }
+  khMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(khDose, -1); });
+  khPlus ?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(khDose,  1); });
+  khZero ?.addEventListener('click', (e)=>{ e.preventDefault(); khDose.value = '0'; });
+  caMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(caDose, -1); });
+  caPlus ?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(caDose,  1); });
+  caZero ?.addEventListener('click', (e)=>{ e.preventDefault(); caDose.value = '0'; });
+  mgMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(mgDose, -1); });
+  mgPlus ?.addEventListener('click', (e)=>{ e.preventDefault(); adjustDose(mgDose,  1); });
+  mgZero ?.addEventListener('click', (e)=>{ e.preventDefault(); mgDose.value = '0'; });
+
+  function sendDroplet(kind, sel){ const val = Number(sel?.value ?? ''); const amount = Number.isFinite(val) ? val : 0; openShortcutWithText(`${formatDateDMY()}\n${formatDropletLine(kind, amount)}`); }
+  khDoseBtn?.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('KH', khDose); });
+  caDoseBtn?.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('Ca', caDose); });
+  mgDoseBtn?.addEventListener('click', (e)=>{ e.preventDefault(); sendDroplet('Mg', mgDose); });
+
+  sendAllDosesBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const dmy = formatDateDMY();
+    const lines = [dmy];
+    const trip = [ ['KH', Number(khDose?.value ?? 0)], ['Ca', Number(caDose?.value ?? 0)], ['Mg', Number(mgDose?.value ?? 0)] ];
+    trip.forEach(([k,v])=>{ if(Number.isFinite(v)) lines.push(formatDropletLine(k, v)); });
+    openShortcutWithText(lines.join('\n'));
+  });
+
+  genDoseBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const label = (genLabel?.value?.trim() || 'Droplet');
+    const amt = Number(genDose?.value ?? 0);
+    openShortcutWithText(`${formatDateDMY()}\n${formatDropletLine(label, amt)}`);
+  });
+
+  // ---------- Export / Import (CSV) ----------
+  function toCSV(rows){
+    const header = ['date','no3','po4','kh','ca','mg','no3Disp','po4Disp','khDisp','khReading','kh2x'];
+    const lines = [header.join(',')];
+    rows.forEach(e=>{
+      lines.push([
+        e.date,
+        e.no3 ?? '', e.po4 ?? '', e.kh ?? '', e.ca ?? '', e.mg ?? '',
+        e.no3Disp ?? '', e.po4Disp ?? '', e.khDisp ?? '',
+        e.khReading ?? '', e.kh2x ?? ''
+      ].join(','));
+    });
+    return lines.join('\n');
+  }
+  function download(filename, text){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/csv'})); a.download = filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); }
+  exportBtn?.addEventListener('click', ()=>{ const csv = toCSV(entries); const stamp = new Date().toISOString().slice(0,10); download(`reef-chemistry-${stamp}.csv`, csv); });
+  importInput?.addEventListener('change', async (ev)=>{
+    const file = ev.target.files?.[0]; if(!file) return; const text = await file.text();
+    const lines = text.split(/\r?\n/).filter(Boolean); const [h, ...rest] = lines; const cols = h.split(',').map(s=>s.trim().toLowerCase());
+    const idx = Object.fromEntries(cols.map((c,i)=>[c,i])); const get = (parts, key) => parts[idx[key]] ?? '';
+    const imported = rest.map(line=>{ const parts = line.split(','); return { id: uid(), date: (get(parts,'date')||'').slice(0,10), no3: toNumber((get(parts,'no3')||'').replace('>','')), po4: toNumber(get(parts,'po4')), kh: toNumber(get(parts,'kh')), ca: toNumber(get(parts,'ca')), mg: toNumber(get(parts,'mg')), no3Disp: get(parts,'no3disp') || null, po4Disp: get(parts,'po4disp') || null, khDisp: get(parts,'khdisp') || null, khReading: get(parts,'khreading') || null, kh2x: toNumber(get(parts,'kh2x')), createdAt: Date.now(), updatedAt: Date.now() } }).filter(e=> e.date);
+    if(!imported.length){ alert('No valid rows found.'); return; }
+    if(!confirm(`Import ${imported.length} rows?`)) return; entries = entries.concat(imported); save(entries);
+  });
+
+  // ---------- Self tests ----------
+  function runTests(){
+    const results = [];
+    const assert = (name, cond, msg='') => results.push({name, ok: !!cond, msg});
+    // IDs sanity (check a subset that must exist)
+    const ids = ['exportBtn','importInput','clearAllBtn','page-home','page-np','page-maint','page-protein','page-droplet'];
+    ids.forEach(id=> assert(`element #${id} exists`, !!document.getElementById(id), 'Missing DOM element'));
+    const okURL = (()=>{ const name = 'SaveToReefTankData'; const txt = 'test'; const url = `shortcuts://run-shortcut?name=${encodeURIComponent(name)}&input=text&text=${encodeURIComponent(txt)}`; return url.startsWith('shortcuts://run-shortcut?'); })();
+    assert('Shortcuts URL generated', okURL);
+    const dmy = formatDMYSlash('2025-09-23'); assert('formatDMYSlash => 23/9/2025', dmy === '23/9/2025', dmy);
+    const r = 0.61; const y = khFromReading(r); const expected = 6.1 + (5.7-6.1)/(0.62-0.60)*(0.61-0.60); assert('KH interp 0.61', Math.abs(y-expected) < 1e-9, `got ${y}, expected ${expected}`);
+    return results.every(r=>r.ok);
+  }
+  runTests();
+  </script>
+</body>
+</html>
