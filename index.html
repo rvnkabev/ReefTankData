@@ -158,7 +158,7 @@
             <option value="10">10</option>
             <option value="11">11</option>
           </select>
-          <div class="hint">Auto‑filled from reading (rounded) if provided; you can override or leave blank.</div>
+          <div class="hint">Auto-filled from reading (rounded) if provided; you can override or leave blank.</div>
         </div>
         <div>
           <label>Computed (from reading)</label>
@@ -186,7 +186,7 @@
       <h2>Maintenance</h2>
       <div class="row" style="align-items:center; justify-content:space-between; margin-bottom:6px">
         <strong>Quick actions</strong>
-        <div class="hint">All actions send a two‑line record to your Shortcut <code>SaveToReefTankData</code>.</div>
+        <div class="hint">All actions send a two-line record to your Shortcut <code>SaveToReefTankData</code>.</div>
       </div>
 
       <div class="grid cols-3" style="margin-bottom:12px">
@@ -206,19 +206,20 @@
       </div>
 
       <div class="grid cols-3">
+        <!-- ★ 改成 g 單位 -->
         <div class="card">
-          <h3>加魚糧（匙）</h3>
+          <h3>加魚糧（g）</h3>
           <div class="dose-row">
             <div class="dose-ctl">
               <button type="button" class="icon-btn" id="foodMinus" aria-label="Decrease">−</button>
-              <button type="button" class="icon-btn" id="foodZero" aria-label="Reset to 0">0</button>
+              <button type="button" class="icon-btn" id="foodZero" aria-label="Reset to 1 g">1</button>
               <button type="button" class="icon-btn" id="foodPlus" aria-label="Increase">+</button>
             </div>
             <select id="foodSpoons" style="max-width:120px"></select>
             <div class="spacer"></div>
             <button type="button" class="btn ghost" id="foodSendBtn">Send → Notes</button>
           </div>
-          <div class="hint">格式：<code>D/M/YYYY</code> + <code>加魚糧 X 匙</code></div>
+          <div class="hint">格式：<code>D/M/YYYY</code> + <code>加魚糧 X g</code></div>
         </div>
         <div class="card">
           <h3>油膜</h3>
@@ -272,7 +273,7 @@
             <div class="spacer"></div>
             <button type="button" class="btn ghost" id="wasteSendBtn">Send → Notes</button>
           </div>
-          <div class="hint">Choice list: 10% … 100%. Buttons fine‑tune (±10%). Reset sets to 0%. Persists as latest value and defaults on next visit. Logged as out of 1500ml.</div>
+          <div class="hint">Choice list: 10% … 100%. Buttons fine-tune (±10%). Reset sets to 0%. Persists as latest value and defaults on next visit. Logged as out of 1500ml.</div>
         </div>
       </div>
     </section>
@@ -343,7 +344,7 @@
     </section>
 
     <details class="panel dev" style="margin-top:16px">
-      <summary>🔧 Self‑tests</summary>
+      <summary>🔧 Self-tests</summary>
       <div id="tests"></div>
       <div class="hint">These run in your browser to catch common issues (missing elements, newline handling, etc.).</div>
     </details>
@@ -560,13 +561,33 @@
 
   changeWaterBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n#changewater`); });
 
-  function fillSpoonsSelect(sel){ if(!sel) return; sel.innerHTML = Array.from({length:6},(_,i)=>`<option value="${i}" ${i===1?'selected':''}>${i}</option>`).join(''); }
-  fillSpoonsSelect(foodSpoons);
-  function adjustSpoons(delta){ const cur = Number(foodSpoons?.value ?? 1); let next = cur + delta; next = Math.max(0, Math.min(5, next)); if(foodSpoons) foodSpoons.value = String(next); }
-  foodMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustSpoons(-1); });
-  foodPlus?.addEventListener('click',  (e)=>{ e.preventDefault(); adjustSpoons( 1); });
-  foodZero?.addEventListener('click',  (e)=>{ e.preventDefault(); if(foodSpoons) foodSpoons.value='0'; });
-  foodSendBtn?.addEventListener('click', (e)=>{ e.preventDefault(); const n = Number(foodSpoons?.value ?? 1); openShortcutWithText(`${formatDateDMY()}\n加魚糧 ${n} 匙`); });
+  // ★ 改成 1g～6g
+  function fillFoodSelect(sel){
+    if(!sel) return;
+    const options = [];
+    for(let g=1; g<=6; g++){
+      const selected = g===1 ? ' selected' : '';
+      options.push(`<option value="${g}"${selected}>${g} g</option>`);
+    }
+    sel.innerHTML = options.join('');
+  }
+  fillFoodSelect(foodSpoons);
+
+  function adjustFood(delta){
+    const cur = Number(foodSpoons?.value ?? 1);
+    let next = cur + delta;
+    next = Math.max(1, Math.min(6, next)); // clamp 1–6 g
+    if(foodSpoons) foodSpoons.value = String(next);
+  }
+
+  foodMinus?.addEventListener('click', (e)=>{ e.preventDefault(); adjustFood(-1); });
+  foodPlus?.addEventListener('click',  (e)=>{ e.preventDefault(); adjustFood( 1); });
+  foodZero?.addEventListener('click',  (e)=>{ e.preventDefault(); if(foodSpoons) foodSpoons.value='1'; }); // reset to 1 g
+  foodSendBtn?.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const n = Number(foodSpoons?.value ?? 1);
+    openShortcutWithText(`${formatDateDMY()}\n加魚糧 ${n} g`);
+  });
 
   surfaceFilmBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n水面有油膜`); });
   filterFlossBtn?.addEventListener('click', (e)=>{ e.preventDefault(); openShortcutWithText(`${formatDateDMY()}\n更換過濾棉`); });
